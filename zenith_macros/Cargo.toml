@@ -1,0 +1,15 @@
+[package]
+name = "zenith_macros"
+version = "0.1.0"
+author = "Reun85"
+repository = "https://github.com/Reun85/Zenith"
+edition = "2021"
+pulbish = true
+doc = true
+test = true
+
+description = "Zenith Macros."
+readme = "../README.md"
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]

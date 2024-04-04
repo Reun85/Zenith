@@ -1,0 +1,45 @@
+[workspace]
+members = [
+  "examples/*",
+  "glsl_to_spirv_macro",
+  "spirv_reflect",
+  "zenith",
+  "zenith_macros",
+]
+resolver = "2"
+license = "MIT"
+
+
+[workspace.dependencies.zenith]
+version = "0.1"
+path = "zenith"
+
+[workspace.dependencies.spirv_reflect]
+version = "0.1"
+path = "spirv_reflect"
+[workspace.dependencies.glsl_to_spirv_macro]
+version = "0.1"
+path = "glsl_to_spirv_macro"
+
+[workspace.dependencies.zenith_macros]
+version = "0.1"
+path = "zenith_macros"
+[workspace.dependencies]
+tracing = "0.1.40"
+tracing-subscriber = "0.3.18"
+thiserror = { version = "1.0.56" }
+smart-default = { version = "0.7.1" }
+
+[profile.CI]
+inherits = "dev"
+debug = 0
+codegen-units = 1
+incremental = false
+
+
+[profile.test]
+opt-level = 1
+
+[profile.bench]
+lto = true
+codegen-units = 1

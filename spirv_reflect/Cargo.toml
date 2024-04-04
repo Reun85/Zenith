@@ -1,0 +1,26 @@
+[package]
+name = "spirv_reflect"
+version = "0.1.0"
+author = "Reun85"
+edition = "2021"
+publish = true
+doc = true
+test = true
+
+[dev-dependencies]
+cgmath = "0.18.0"
+shaderc = "0.8.3"
+ash = "0.37.3"
+
+[[example]]
+name = "mod"
+path = "example/mod.rs"
+
+[toolchain]
+channel = "nightly"
+
+[dependencies]
+rspirv = { version = "0.12.0" }
+thiserror = { version = "1.0.56", workspace = true }
+enum_dispatch = "0.3.12"
+paste = "1.0.14"
