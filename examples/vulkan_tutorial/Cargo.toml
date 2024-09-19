@@ -12,9 +12,9 @@ doc = false
 
 
 [dependencies]
-ash = { version = "0.37.3", features = ["linked", "debug"] }
+ash = { version = "0.37.3", features = ["debug"] }
 ash-window = { version = "0.12.0" }
-glsl_to_spirv_macro = { workspace = true }
+glsl_to_spirv_macro = { path = "../../glsl_to_spirv_macro" }
 # Using a later version brakes raw handles
 raw-window-handle = "0.5.2"
 zenith = { workspace = true }

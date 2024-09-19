@@ -76,7 +76,7 @@ fn main() -> Result<(), ReflectError> {
     let vert = include_bytes!("./shaders/vert");
     // let reflec = spirv_reflect::Reflection::new_from_spirv(sampler).unwrap();
     let reflec = spirv_reflect::Reflection::new_from_spirv(vert).unwrap();
-    let debug_names = reflec.get_debug_names().unwrap();
+    let debug_names = reflec.get_debug_names();
     // allinstr.iter().for_each(|x| {
     //     println!("{:?}", LessVerboseInstr(x, Some(&debug_names)));
     // });

@@ -212,36 +212,32 @@ fn main() {
         base.device
             .bind_buffer_memory(vertex_input_buffer, vertex_input_buffer_memory, 0)
             .unwrap();
-        // glsl_to_spirv_macro::shader! {
-        //     shaders: [{
-        //         name: vs,
-        //         path: "src/shaders/vert.vert",
-        //         ty: "vertex",
-        //     },{
-        //         name: fs,
-        //         path: "src/shaders/frag.frag",
-        //         ty:"fragment"
-        //     }                    ],
-        //     vulkan_version: "1.0",
-        //     spirv_version: "1.0",
-        // }
-        let vertex = vs::load_bytes();
-        let frag = fs::load_bytes();
-        let mut vertex_spv_file = Cursor::new(&vertex);
-        // Cursor::new(&include_bytes!("../../shader/triangle/vert.spv")[..]);
-        let mut frag_spv_file = Cursor::new(&frag);
+        glsl_to_spirv_macro::shader! {
+            shaders: [{
+                name: vs,
+                path: "src/shaders/vert.vert",
+                ty: "vertex",
+            },{
+                name: fs,
+                path: "src/shaders/frag.frag",
+                ty:"fragment"
+            }                    ],
+            vulkan_version: "1.0",
+            spirv_version: "1.0",
+        }
+        let vertex: &[u32] = vs::load_words();
+        let frag: &[u32] = fs::load_words();
+        // let mut vertex_spv_file = Cursor::new(&vertex);
+        // // Cursor::new(&include_bytes!("../../shader/triangle/vert.spv")[..]);
+        // let mut frag_spv_file = Cursor::new(&frag);
 
-        let vertex_code =
-            read_spv(&mut vertex_spv_file).expect("Failed to read vertex shader spv file");
-        let vertex_shader_info = vk::ShaderModuleCreateInfo::builder()
-            .code(&vertex_code)
-            .build();
+        // let vertex_code =
+        //     read_spv(&mut vertex_spv_file).expect("Failed to read vertex shader spv file");
+        let vertex_shader_info = vk::ShaderModuleCreateInfo::builder().code(vertex).build();
 
-        let frag_code =
-            read_spv(&mut frag_spv_file).expect("Failed to read fragment shader spv file");
-        let frag_shader_info = vk::ShaderModuleCreateInfo::builder()
-            .code(&frag_code)
-            .build();
+        // let frag_code =
+        //     read_spv(&mut frag_spv_file).expect("Failed to read fragment shader spv file");
+        let frag_shader_info = vk::ShaderModuleCreateInfo::builder().code(frag).build();
 
         let vertex_shader_module = base
             .device

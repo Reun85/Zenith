@@ -1,4 +1,6 @@
-use std::{borrow::Cow, os::unix::fs::MetadataExt};
+use std::{borrow::Cow, cell::RefCell, os::unix::fs::MetadataExt, rc::Rc};
+
+use shaderc::CompilationArtifact;
 
 use crate::utils::*;
 
@@ -13,10 +15,18 @@ pub enum CompilerInitError {
     #[error("Could not get shaderc compiler")]
     CompilerMissing,
 }
-#[derive(serde::Deserialize, serde::Serialize)]
+#[derive(serde::Deserialize, serde::Serialize, Clone, PartialEq, Eq, Debug)]
 pub struct CompileArtifacts {
     words: Vec<u32>,
     includes: Vec<std::path::PathBuf>,
+}
+impl CompileArtifacts {
+    pub fn words(&self) -> &[u32] {
+        &self.words
+    }
+    pub fn includes(&self) -> &[std::path::PathBuf] {
+        &self.includes
+    }
 }
 
 impl Compiler {
@@ -66,7 +76,8 @@ impl Compiler {
         additional_options.set_auto_map_locations(true);
         additional_options.set_auto_combined_image_sampler(true);
         let include_folder = std::path::PathBuf::from(&input.root.value);
-        let mut included_paths: Vec<std::path::PathBuf> = vec![];
+        let includes: Rc<RefCell<Vec<std::path::PathBuf>>> = Rc::new(RefCell::new(vec![]));
+        let included_paths = includes.clone();
         additional_options.set_include_callback(move |inc, ty, name_of_file, _| {
             let mut path = match ty {
                 shaderc::IncludeType::Relative => {
@@ -81,7 +92,7 @@ impl Compiler {
             path.push(inc);
 
             if !path.exists() {
-                return Err(format!("file does not exist {:?}", path).into());
+                return Err(format!("file does not exist {:?}", path));
             }
             let res = std::fs::read_to_string(path.clone()).map_err(|_| {
                 format!(
@@ -89,10 +100,10 @@ impl Compiler {
                     path, inc
                 )
             })?;
-            included_paths.push(path);
+            included_paths.borrow_mut().push(path);
             Ok(shaderc::ResolvedInclude {
                 resolved_name: inc.into(),
-                content: res.into(),
+                content: res,
             })
         });
         #[cfg(feature = "generate_debug_info")]
@@ -114,14 +125,16 @@ impl Compiler {
                 .emit_warning(artifact.get_warning_messages());
         }
         let words = artifact.as_binary().into();
-        Ok(CompileArtifacts {
-            words,
-            includes: included_paths,
-        })
+        // This should drop included_paths
+        drop(artifact);
+        drop(additional_options);
+        // TODO: This copies this data.
+        let includes: Vec<std::path::PathBuf> = includes.borrow().clone();
+        Ok(CompileArtifacts { words, includes })
     }
     fn local_to_manifest(
         &self,
-        root: &std::path::PathBuf,
+        root: &std::path::Path,
         path: &std::path::PathBuf,
     ) -> std::path::PathBuf {
         let manifest_dir = match std::env::var("CARGO_RUSTC_CURRENT_DIR") {
@@ -129,7 +142,7 @@ impl Compiler {
             Err(_) => return path.clone(),
         };
         let manifest_dir = std::path::PathBuf::from(manifest_dir);
-        let mut full = root.clone();
+        let mut full: std::path::PathBuf = root.into();
         full.push(path);
         if full.starts_with(&manifest_dir) {
             full.strip_prefix(&manifest_dir).unwrap().to_path_buf()
@@ -215,7 +228,7 @@ impl Compiler {
             let words = previous_info.and_then(|x| x.generated_binary);
             let reflection = words
                 .as_ref()
-                .and_then(|x| spirv_reflect::Reflection::new_from_spirv_words(&x).ok());
+                .and_then(|x| spirv_reflect::Reflection::new_from_spirv_words(&x.words).ok());
             (words, reflection)
         } else {
             (None, None)
@@ -224,7 +237,7 @@ impl Compiler {
         let (words, reflection) = match (words, reflection) {
             (Some(words), Some(reflection)) => (
                 match words {
-                    Cow::Borrowed(x) => x.to_vec(),
+                    Cow::Borrowed(x) => x.clone(),
                     Cow::Owned(x) => x,
                 },
                 reflection,
@@ -266,7 +279,7 @@ impl Compiler {
     pub(crate) fn get_words_and_reflection(
         &self,
         info: &crate::ShaderInfo<'_>,
-    ) -> syn::Result<(Vec<u32>, spirv_reflect::Reflection)> {
+    ) -> syn::Result<(CompileArtifacts, spirv_reflect::Reflection)> {
         self.try_and_load_from_checkpoint(info)
     }
 
@@ -275,10 +288,10 @@ impl Compiler {
         info: &crate::ShaderInfo<'_>,
     ) -> std::result::Result<(Vec<u32>, spirv_reflect::Reflection), syn::Error> {
         let span = info.data.span();
-        let (iwords, _) = self.compile(info)?;
-        let ireflection = spirv_reflect::Reflection::new_from_spirv_words(&iwords)
+        let compile_artifacts = self.compile(info)?;
+        let ireflection = spirv_reflect::Reflection::new_from_spirv_words(&compile_artifacts.words)
             .map_err(|err| span.to_error(err.to_string()))?;
-        Ok((iwords, ireflection))
+        Ok((compile_artifacts.words, ireflection))
     }
 }
 
@@ -299,7 +312,7 @@ impl<'a> InnerInfo<'a> {
     fn from(
         value: crate::ShaderInfo<'a>,
         last_changed_time: u128,
-        generated_binary: Option<Cow<'a, Vec<u32>>>,
+        generated_binary: Option<Cow<'a, CompileArtifacts>>,
     ) -> Self {
         Self {
             ty: *value.ty.value(),

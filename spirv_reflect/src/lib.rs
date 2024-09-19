@@ -296,12 +296,11 @@ impl Reflection {
         Self(module)
     }
 
-    /// .
+    ///Parse from a SPIR-V binary.
     ///
     /// # Errors
     ///
     /// This function will return an error if the supplied binary is not valid SPIR-V Code.
-    // Parse from a SPIR-V binary.
     pub fn new_from_spirv(code: &[u8]) -> Result<Self> {
         let module = rspirv::dr::load_bytes(code)?;
         Ok(Self::new(module))
@@ -374,20 +373,17 @@ impl Reflection {
         }
     }
 
-    pub fn get_all_variables<'a>(&'a self) -> Result<Vec<(Id, StorageClass)>> {
+    pub fn get_all_variables(&self) -> Result<Vec<(Id, StorageClass)>> {
         self.get_all_variables_iter().collect::<Result<Vec<_>>>()
     }
-    pub fn get_all_variables_iter<'a>(
-        &'a self,
-    ) -> impl Iterator<Item = std::result::Result<(u32, rspirv::spirv::StorageClass), ReflectError>> + 'a
+    pub fn get_all_variables_iter(
+        &self,
+    ) -> impl Iterator<Item = std::result::Result<(u32, rspirv::spirv::StorageClass), ReflectError>> + '_
     {
         self.0
             .types_global_values
             .iter()
-            .filter(|inst| match inst.class.opcode {
-                spirv::Op::Variable => true,
-                _ => false,
-            })
+            .filter(|inst| matches!(inst.class.opcode, spirv::Op::Variable))
             .map(|inst| {
                 let cls = get_operand_at!(inst, Operand::StorageClass, 0);
                 let result_id = inst
@@ -431,10 +427,7 @@ impl Reflection {
         }
     }
     // pub fn get_all_types(&self) -> BTreeMap<u32, TypeInfo> {}
-    pub fn get_all_variables_with_storage_class<'a>(
-        &'a self,
-        class: StorageClass,
-    ) -> Result<Vec<Id>> {
+    pub fn get_all_variables_with_storage_class(&self, class: StorageClass) -> Result<Vec<Id>> {
         self.get_all_variables_iter()
             .filter_map(|x| match x {
                 Ok((id, cls)) if cls == class => Some(Ok(id)),
@@ -1051,9 +1044,7 @@ impl Reflection {
             .iter()
             .filter(|i| i.class.opcode == spirv::Op::MemberDecorate)
             .filter_map(|&i| match get_operand_at!(i, Operand::Decoration, 2) {
-                Ok(decoration) if decoration == spirv::Decoration::Offset => {
-                    Some(get_operand_at!(i, Operand::LiteralBit32, 3))
-                }
+                Ok(spirv::Decoration::Offset) => Some(get_operand_at!(i, Operand::LiteralBit32, 3)),
                 Err(err) => Some(Err(err)),
                 _ => None,
             })
@@ -1149,7 +1140,7 @@ impl Reflection {
             .filter_map(|i| {
                 let cls = get_operand_at!(*i, Operand::StorageClass, 0);
                 match cls {
-                    Ok(cls) if cls == spirv::StorageClass::PushConstant => Some(Ok(i)),
+                    Ok(spirv::StorageClass::PushConstant) => Some(Ok(i)),
                     Err(err) => Some(Err(err)),
                     _ => None,
                 }
@@ -1194,15 +1185,8 @@ impl Reflection {
     }
 }
 pub fn filter_instructions_that_have_id(instr: &[Instruction]) -> Vec<&Instruction> {
-    instr
-        .iter()
-        .filter_map(|a| {
-            let op = get_operand_at!(a, Operand::IdRef, 0);
-            match op {
-                Ok(_) => Some(a),
-                Err(_) => None,
-            }
-        })
+    let iter = instr.iter();
+    iter.filter(|a| get_operand_at!(*a, Operand::IdRef, 0).is_ok())
         .collect::<Vec<_>>()
 }
 

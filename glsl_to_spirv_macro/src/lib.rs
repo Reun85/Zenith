@@ -147,7 +147,7 @@ fn shader_inner(input: Input) -> std::result::Result<proc_macro2::TokenStream, s
     // We have successfully compiled all the shaders at this point. Is storing all of them in a
     // vec resource intensive? Doubt.
     let iter = compiled
-        .map(|(info, words, reflec)| tokengeneration::to_tokens(info, words, reflec))
+        .map(|(info, words, reflec)| tokengeneration::to_tokens(info, words.words(), reflec))
         .collect::<syn::Result<Vec<_>>>()?;
     let tokens = quote::quote!(#(#iter)*);
     Ok(tokens)

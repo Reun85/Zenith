@@ -1,7 +1,7 @@
 use crate::utils::*;
 pub(crate) fn to_tokens(
     info: crate::ShaderInfo<'_>,
-    words: Vec<u32>,
+    words: &[u32],
     reflection: spirv_reflect::Reflection,
 ) -> syn::Result<proc_macro2::TokenStream> {
     let visibility = quote::quote! {pub};
@@ -48,7 +48,7 @@ pub(crate) fn to_tokens(
 fn create_data_rep(
     reflec: &spirv_reflect::Reflection,
 ) -> Result<proc_macro2::TokenStream, spirv_reflect::ReflectError> {
-    let debug_names = reflec.get_debug_names()?;
+    let debug_names = reflec.get_debug_names();
     let input_variables =
         reflec.get_all_variables_with_storage_class(spirv_reflect::spirv::StorageClass::Input)?;
     let uniform_variables =

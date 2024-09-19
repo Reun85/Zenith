@@ -824,7 +824,6 @@ impl Drop for Pipeline {
 }
 
 use glsl_to_spirv_macro::shader;
-extern crate glsl_to_spirv_macro;
 shader! {
     root: "src/shaders",
     shaders:[
@@ -879,13 +878,11 @@ impl Instance {
         let fragment_stage = ash::vk::PipelineShaderStageCreateInfo::builder()
             .stage(ash::vk::ShaderStageFlags::FRAGMENT)
             .module(fragment)
-            .name(ENTRY_POINT).deref()
-            .build();
+            .name(ENTRY_POINT).build();
         let vertex_stage = ash::vk::PipelineShaderStageCreateInfo::builder()
             .stage(ash::vk::ShaderStageFlags::VERTEX)
             .module(vertex)
-            .name(ENTRY_POINT)
-            .build();
+            .name(ENTRY_POINT).build();
 
         let stages = [fragment_stage, vertex_stage];
 

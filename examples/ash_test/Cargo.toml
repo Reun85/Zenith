@@ -22,10 +22,10 @@ zenith = { workspace = true }
 cgmath = "0.18"
 png = "0.17"
 rand = "0.8.4"
-ron = "0.8"
 serde = { version = "1.0", features = ["derive"] }
 thiserror = { version = "1.0" }
 anyhow = { version = "1.0" }
+nalgebra = "0.33.0"
 
 [dependencies.winit]
 version = "0.28.7"

@@ -1,4 +1,3 @@
-
 struct Helper<const DROPPABLE: bool>;
 impl<const DROPPABLE: bool> Drop for Helper<DROPPABLE> {
     fn drop(&mut self) {
@@ -10,6 +9,8 @@ impl<const DROPPABLE: bool> Drop for Helper<DROPPABLE> {
                 }
             };
         }
+        // This is here so that the panic happens at compile time.
+        #[allow(clippy::let_unit_value)]
         let _ = ConstBlock::<DROPPABLE>::BLOCK;
     }
 }

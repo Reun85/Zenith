@@ -13,6 +13,8 @@ glsl_to_spirv_macro::shader! {
 mod test {
     use super::*;
     #[test]
+    fn compiled2() {}
+    #[test]
     fn compiled() {
         let x = vert::load_words();
         vert::Input {
