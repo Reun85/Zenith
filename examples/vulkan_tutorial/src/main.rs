@@ -17,7 +17,7 @@ impl App {
 
 fn main() {
     log::create(log::LoggingCreateInfo {
-        level: log::Level::WARN,
+        level: log::Level::TRACE,
         ..log::LoggingCreateInfo::max()
     });
 
