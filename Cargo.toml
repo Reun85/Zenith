@@ -1,6 +1,6 @@
 [workspace]
 members = [
-  "examples/vulkan_tutorial",
+  "examples/*",
   "glsl_to_spirv_macro",
   "spirv_reflect",
   "zenith",

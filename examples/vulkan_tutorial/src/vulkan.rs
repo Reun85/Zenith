@@ -132,7 +132,7 @@ impl FramesInFlight {
             .into_iter()
             .zip(command_buffers)
             .zip(uniform_buffs)
-            .zip(descriptor_sets.into_iter())
+            .zip(descriptor_sets)
             .map(
                 |(((sync_objects, command_buffer), uniform_buffer), descriptor_set)| {
                     FrameInFlightData {
@@ -279,7 +279,7 @@ impl Renderer {
             self.swapchain
                 .swapchain_loader
                 .queue_present(self.device.present_queue, &present_info)
-                .unwrap()
+                .unwrap_or(false)
         };
         suboptimal2 || suboptimal
     }
@@ -365,7 +365,6 @@ impl VulkanApp {
         let swapchain = instance.create_swapchain(&surface, swapchainsupport, &device)?;
         log::debug!("Created swapchain");
         let render_pass = instance.create_render_pass(&device, &swapchain)?;
-
         log::debug!("Created render_pass");
         let pipeline = instance.create_pipeline(&device, &swapchain, &render_pass)?;
         log::debug!("Created pipeline");
@@ -464,11 +463,13 @@ impl VulkanApp {
             .chain(optional_extensions)
             .collect::<Vec<_>>();
         log::trace!("Optional extensions {:?}", enabled_extensions);
-        let layers = if cfg!(debug_assertions) {
-            vec![Layer::VALIDATIONLAYER]
-        } else {
-            vec![]
-        };
+        // TODO: reset this to original impl
+        // let layers = if cfg!(debug_assertions) {
+        //     vec![Layer::VALIDATIONLAYER]
+        // } else {
+        //     vec![]
+        // };
+        let layers = vec![Layer::VALIDATIONLAYER];
         let validation_layers = library.filter_available_validation_layers(layers);
         let instance = library.create_instance(InstanceCreateInfo {
             application_name: "Zenith Example",
@@ -626,6 +627,7 @@ pub struct Surface {
     pub surface: ash::vk::SurfaceKHR,
     pub surface_loader: ash::extensions::khr::Surface,
 }
+
 impl Drop for Surface {
     fn drop(&mut self) {
         log::trace!("Dropping Surface");
@@ -899,6 +901,18 @@ pub struct SwapChain {
     extent: ash::vk::Extent2D,
 }
 
+impl std::fmt::Debug for SwapChain {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SwapChain")
+            .field("swapchain", &self.swapchain)
+            .field("_images", &self._images)
+            .field("image_views", &self.image_views)
+            .field("surface_format", &self.surface_format)
+            .field("extent", &self.extent)
+            .finish()
+    }
+}
+
 #[derive(derive_more::Deref)]
 pub struct Pipeline {
     #[deref]
@@ -1006,15 +1020,14 @@ impl Instance {
             .viewports(&viewport_info)
             .scissors(&scissors);
 
-        let dynamic_state = {
-            let dyn_states = [
-                ash::vk::DynamicState::VIEWPORT,
-                ash::vk::DynamicState::SCISSOR,
-            ];
-            ash::vk::PipelineDynamicStateCreateInfo::builder()
-                .dynamic_states(&dyn_states)
-                .build()
-        };
+        let dynamic_states = [
+            ash::vk::DynamicState::VIEWPORT,
+            ash::vk::DynamicState::SCISSOR,
+        ];
+
+        let dynamic_state_info = ash::vk::PipelineDynamicStateCreateInfo::builder()
+            .dynamic_states(&dynamic_states)
+            .build();
         log::trace!("Viewport state");
         let rasterizer = ash::vk::PipelineRasterizationStateCreateInfo::builder()
             .depth_clamp_enable(false)
@@ -1055,19 +1068,16 @@ impl Instance {
             [unsafe { device.device.create_descriptor_set_layout(&desc_info, None) }.unwrap()];
 
         let pipeline_layout = {
-            let create_info = ash::vk::PipelineLayoutCreateInfo::builder()
-                .set_layouts(&set_layout)
-                .push_constant_ranges(&[]);
+            let create_info = ash::vk::PipelineLayoutCreateInfo::builder().set_layouts(&set_layout);
             unsafe { device.device.create_pipeline_layout(&create_info, None) }?
         };
-        log::trace!("Created pipeline layout");
         let pipeline = unsafe {
             let create_info = ash::vk::GraphicsPipelineCreateInfo::builder()
                 .stages(&stages)
                 .vertex_input_state(&vert_input)
                 .input_assembly_state(&assembly_info)
                 .viewport_state(&viewport_state)
-                .dynamic_state(&dynamic_state)
+                .dynamic_state(&dynamic_state_info)
                 .rasterization_state(&rasterizer)
                 .multisample_state(&sampling)
                 .color_blend_state(&color_blend_info)
@@ -1140,7 +1150,6 @@ impl Instance {
             .map(|x| {
                 self.create_image_view(device, x, details.format.format)
                     .unwrap()
-                    .into()
             })
             // .map(|image| {
             //     let create_info = ImageViewCreateInfo::builder()
@@ -1180,7 +1189,12 @@ impl Instance {
         window_inner_size: (u32, u32),
     ) -> anyhow::Result<(Device, SwapChainSupport)> {
         let device_extensions = vec![ash::extensions::khr::Swapchain::name()];
-        let (physical_dev, _, swap_chain_support, (graph_index, pres_index)) = {
+        let (
+            physical_dev,
+            physical_device_properties,
+            swap_chain_support,
+            (graph_index, pres_index),
+        ) = {
             let physical_devices = unsafe { self.inner.enumerate_physical_devices() }?;
             let devices_and_properties = physical_devices.into_iter().map(|physical_device| {
                 let properties =
@@ -1279,6 +1293,7 @@ impl Instance {
                     score += properties.limits.max_image_dimension2_d;
                     score
                 });
+
             best_device.ok_or(anyhow::anyhow!("No physical devices found"))?
         };
 
@@ -1336,17 +1351,17 @@ impl Instance {
             .stencil_store_op(ash::vk::AttachmentStoreOp::DONT_CARE)
             .initial_layout(ash::vk::ImageLayout::UNDEFINED)
             .final_layout(ash::vk::ImageLayout::PRESENT_SRC_KHR)
-            .build(); // Build here to finalize the struct
+            .flags(ash::vk::AttachmentDescriptionFlags::empty());
 
-        let attachment_ref = [ash::vk::AttachmentReference::builder()
+        let attachment_ref = ash::vk::AttachmentReference::builder()
             .attachment(0)
             .layout(ash::vk::ImageLayout::COLOR_ATTACHMENT_OPTIMAL)
-            .build()]; // Build here to finalize the struct
+            .build();
 
+        let binding = [attachment_ref];
         let subpass = ash::vk::SubpassDescription::builder()
             .pipeline_bind_point(ash::vk::PipelineBindPoint::GRAPHICS)
-            .color_attachments(&attachment_ref)
-            .build(); // Build here to finalize the struct
+            .color_attachments(&binding);
 
         let dependency = ash::vk::SubpassDependency::builder()
             .src_subpass(ash::vk::SUBPASS_EXTERNAL)
@@ -1354,48 +1369,21 @@ impl Instance {
             .src_stage_mask(ash::vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT)
             .src_access_mask(ash::vk::AccessFlags::empty())
             .dst_stage_mask(ash::vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT)
-            .dst_access_mask(ash::vk::AccessFlags::COLOR_ATTACHMENT_WRITE)
-            .build(); // Build here to finalize the struct
+            .dst_access_mask(ash::vk::AccessFlags::COLOR_ATTACHMENT_WRITE);
 
+        let binding1 = [*attachment_info];
+        let binding2 = [*dependency];
+        let binding3 = [*subpass];
         let render_pass_info = ash::vk::RenderPassCreateInfo::builder()
-            .attachments(&[attachment_info]) // `attachment_info` is built already
-            .dependencies(&[dependency]) // `dependency` is built already
-            .subpasses(&[subpass]) // `subpass` is built already
-            .build(); // Build here to finalize the struct
+            .attachments(&binding1)
+            .dependencies(&binding2)
+            .subpasses(&binding3)
+            .build();
 
+        log::trace!("Creating render pass {:?}", render_pass_info);
         let render_pass = unsafe { device.device.create_render_pass(&render_pass_info, None) }?;
 
         Ok(RenderPass { render_pass })
-        // let attachment_info = ash::vk::AttachmentDescription::builder()
-        //     .format(swapchain.surface_format.format)
-        //     .samples(ash::vk::SampleCountFlags::TYPE_1)
-        //     .load_op(ash::vk::AttachmentLoadOp::CLEAR)
-        //     .store_op(ash::vk::AttachmentStoreOp::STORE)
-        //     .stencil_load_op(ash::vk::AttachmentLoadOp::DONT_CARE)
-        //     .stencil_store_op(ash::vk::AttachmentStoreOp::DONT_CARE)
-        //     .initial_layout(ash::vk::ImageLayout::UNDEFINED)
-        //     .final_layout(ash::vk::ImageLayout::PRESENT_SRC_KHR);
-        // let attachment_ref = [ash::vk::AttachmentReference::builder()
-        //     .attachment(0)
-        //     .layout(ash::vk::ImageLayout::COLOR_ATTACHMENT_OPTIMAL)
-        //     .build()];
-        // let subpass = ash::vk::SubpassDescription::builder()
-        //     .pipeline_bind_point(ash::vk::PipelineBindPoint::GRAPHICS)
-        //     .color_attachments(&attachment_ref);
-        // let dependency = ash::vk::SubpassDependency::builder()
-        //     .src_subpass(ash::vk::SUBPASS_EXTERNAL)
-        //     .dst_subpass(0)
-        //     .src_stage_mask(ash::vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT)
-        //     .src_access_mask(ash::vk::AccessFlags::empty())
-        //     .dst_stage_mask(ash::vk::PipelineStageFlags::COLOR_ATTACHMENT_OUTPUT)
-        //     .dst_access_mask(ash::vk::AccessFlags::COLOR_ATTACHMENT_WRITE);
-        // let render_pass_info = ash::vk::RenderPassCreateInfo::builder()
-        //     .attachments(&[attachment_info.build()])
-        //     .dependencies(&[*dependency])
-        //     .subpasses(&[subpass.build()])
-        //     .build();
-        // let render_pass = unsafe { device.device.create_render_pass(&render_pass_info, None) }?;
-        // Ok(RenderPass { render_pass })
     }
 
     fn create_frame_buffers(
@@ -1408,12 +1396,13 @@ impl Instance {
             .image_views
             .iter()
             .map(|x| {
+                let binding = [*x];
                 let create = ash::vk::FramebufferCreateInfo::builder()
                     .render_pass(render_pass.render_pass)
                     .width(swapchain.extent.width)
                     .height(swapchain.extent.height)
                     .layers(1)
-                    .attachments(&[*x])
+                    .attachments(&binding)
                     .build();
                 unsafe { device.create_framebuffer(&create, None) }.map(|x| x.into())
             })
@@ -1675,19 +1664,21 @@ impl Instance {
                 .image_view(image_view.view)
                 .sampler(sampler.sampler)
                 .build();
+            let binding = [buffer_info];
             let buffer_write = ash::vk::WriteDescriptorSet::builder()
                 .dst_set(*set)
                 .dst_binding(0)
                 .dst_array_element(0)
                 .descriptor_type(ash::vk::DescriptorType::UNIFORM_BUFFER)
-                .buffer_info(&[buffer_info])
+                .buffer_info(&binding)
                 .build();
+            let binding2 = [image_sampler_info];
             let image_write = ash::vk::WriteDescriptorSet::builder()
                 .dst_set(*set)
                 .dst_binding(1)
                 .dst_array_element(0)
                 .descriptor_type(ash::vk::DescriptorType::COMBINED_IMAGE_SAMPLER)
-                .image_info(&[image_sampler_info])
+                .image_info(&binding2)
                 .build();
             unsafe { device.update_descriptor_sets(&[buffer_write, image_write], &[]) }
         });
@@ -2048,7 +2039,8 @@ fn query_swapchain_support(
             .get_physical_device_surface_present_modes(physical_device, surface.surface)
     }
     .unwrap();
-    if !(formats.len() > 0 && present_modes.len() > 0) {
+    log::trace!("formats: {:?} present_modes: {:?}", formats, present_modes);
+    if !(!formats.is_empty() && !present_modes.is_empty()) {
         return None;
     }
     let best_format = formats

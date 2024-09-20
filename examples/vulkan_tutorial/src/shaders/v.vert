@@ -1,8 +1,4 @@
 #version 450
-#extension GL_ARB_separate_shader_objects : enable
-#extension GL_EXT_debug_printf : enable
-
-
 // Interesting: if this was dvec3 which is 64 bit, it uses 2 slots! So inColor would have to be location=2
 
 
