@@ -18,3 +18,6 @@ smart-default = { workspace = true }
 glsl_to_spirv_macro = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
+thiserror = { workspace = true }
+derive_more = { workspace = true }
+nalgebra = { workspace = true }
