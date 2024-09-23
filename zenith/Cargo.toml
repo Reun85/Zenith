@@ -12,7 +12,7 @@ readme = "../README.md"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-smart-default = { version = "0.7.1", workspace = true }
+smart-default = { workspace = true }
 glsl_to_spirv_macro = { workspace = true }
-tracing = { version = "0.1.40", workspace = true }
-tracing-subscriber = { version = "0.3.18", workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }

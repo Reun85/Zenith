@@ -12,20 +12,18 @@ doc = false
 
 
 [dependencies]
-ash = { version = "0.37.3", features = ["linked", "debug"] }
-ash-window = { version = "0.12.0" }
+ash = { workspace = true }
+ash-window = { workspace = true }
 glsl_to_spirv_macro = { workspace = true }
-raw-window-handle = "0.5.2"
+raw-window-handle = { workspace = true }
 
 zenith = { workspace = true }
 
-cgmath = "0.18"
-png = "0.17"
-rand = "0.8.4"
-serde = { version = "1.0", features = ["derive"] }
-thiserror = { version = "1.0" }
-anyhow = { version = "1.0" }
-nalgebra = "0.33.0"
-
-[dependencies.winit]
-version = "0.28.7"
+cgmath = { workspace = true }
+png = { workspace = true }
+rand = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+nalgebra = { workspace = true }
+winit = { workspace = true }
