@@ -39,7 +39,13 @@ impl LoggingCreateInfo {
     }
 }
 
-pub fn create(info: LoggingCreateInfo) {
+#[derive(Debug, derive_more::From, thiserror::Error)]
+pub enum Error {
+    #[error("Failed to set global default")]
+    SetGlobalDefault(tracing::subscriber::SetGlobalDefaultError),
+}
+
+pub fn create(info: LoggingCreateInfo) -> Result<(), Error> {
     let LoggingCreateInfo {
         level,
         span_enter,
@@ -65,5 +71,5 @@ pub fn create(info: LoggingCreateInfo) {
             .with_max_level(level)
             .finish(),
     )
-    .expect("setting default subscriber failed");
+    .map_err(Into::into)
 }
