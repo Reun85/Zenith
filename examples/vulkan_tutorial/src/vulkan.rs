@@ -2,8 +2,8 @@
 // Fields are deleted in the order of definition.
 
 // TODO: move most functions under Device
-// Make a better drop implementation using zenith::undrop;
 // Instead of creating multiple single command buffers. Queue them together.
+use crate::log;
 use smallvec::SmallVec;
 const MAX_FRAMES_IN_FLIGHT: usize = 2;
 pub struct VulkanApp {
@@ -496,7 +496,7 @@ impl VulkanApp {
         let layers = vec![Layer::VALIDATIONLAYER];
         let validation_layers = library.filter_available_validation_layers(layers);
         let instance = library.create_instance(InstanceCreateInfo {
-            application_name: "Zenith Example",
+            application_name: "Example",
             enabled_layers: validation_layers,
             enabled_extensions,
             ..Default::default()
@@ -569,7 +569,6 @@ use std::{
     ffi::{CStr, CString},
     fmt::Debug,
 };
-use zenith::log;
 
 use raw_window_handle::{HasRawDisplayHandle, HasRawWindowHandle};
 
@@ -587,7 +586,7 @@ impl Window {
     pub fn new() -> anyhow::Result<Self> {
         let event_loop = winit::event_loop::EventLoop::new();
         let window = winit::window::WindowBuilder::new()
-            .with_title("Zenith Example")
+            .with_title("Example")
             .with_fullscreen(Some(winit::window::Fullscreen::Borderless(None)))
             .build(&event_loop)?;
         Ok(Self { event_loop, window })
@@ -616,10 +615,10 @@ pub struct VulkanLibrary {
 const VULKAN_API_VERSION: u32 = ash::vk::make_api_version(0, 1, 3, 250);
 const ENGINE_VERSION: u32 = ash::vk::make_api_version(0, 0, 0, 1);
 
-const ENGINE_NAME: &CStr = cstr::cstr!("Zenith");
+const ENGINE_NAME: &CStr = cstr::cstr!("");
 #[derive(Debug, smart_default::SmartDefault)]
 pub struct InstanceCreateInfo<'a> {
-    #[default = "Zenith Example"]
+    #[default = "Example"]
     pub application_name: &'a str,
     #[default(vec![])]
     pub enabled_extensions: Vec<Extension<'a>>,
@@ -862,7 +861,7 @@ impl VulkanLibrary {
                 let x = available_extensions.iter().any(|av| *av == ext.0);
                 #[cfg(debug_assertions)]
                 if !x {
-                    zenith::log::error!("Required extension {:?} is not available", ext);
+                    log::error!("Required extension {:?} is not available", ext);
                 }
                 x
             }
@@ -894,7 +893,7 @@ impl VulkanLibrary {
                     .any(|layer2| *layer2 == layer.0);
 
                 if !x {
-                    zenith::log::warn!("Validation layer {:?} is not available", layer);
+                    log::warn!("Validation layer {:?} is not available", layer);
                 }
                 x
             })
@@ -2255,16 +2254,16 @@ unsafe extern "system" fn vulkan_debug_callback(
     // let msg = format!("{}: [{}] ({:?})", message_id_name, message, objects);
     match message_severity {
         Severity::ERROR => {
-            zenith::log::error!(msg)
+            log::error!(msg)
         }
         Severity::WARNING => {
-            zenith::log::warn!(msg)
+            log::warn!(msg)
         }
         Severity::INFO => {
-            zenith::log::info!(msg)
+            log::info!(msg)
         }
         Severity::VERBOSE => {
-            zenith::log::debug!(msg)
+            log::debug!(msg)
         }
         _ => {}
     }

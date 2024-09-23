@@ -1,5 +1,4 @@
-use zenith::log;
-
+mod log;
 mod vulkan;
 struct App {
     renderer: vulkan::VulkanApp,
