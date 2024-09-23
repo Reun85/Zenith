@@ -1,7 +1,5 @@
 use std::{borrow::Cow, cell::RefCell, os::unix::fs::MetadataExt, rc::Rc};
 
-use shaderc::CompilationArtifact;
-
 use crate::utils::*;
 
 pub struct Compiler {
@@ -150,8 +148,8 @@ impl Compiler {
             path.clone()
         }
     }
-    // This was a very noble idea, but sadly aslong as the compiled glsl files can include external
-    // files, this would become way to combersome to actually use.
+    // This was a very noble idea, but sadly as long as the compiled glsl files can include external
+    // files, this would become way to cumbersome to actually use.
     fn try_and_load_from_checkpoint(
         &self,
         info: &crate::ShaderInfo<'_>,

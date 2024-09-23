@@ -30,7 +30,7 @@ pub struct Renderer {
 
 impl Drop for Renderer {
     fn drop(&mut self) {
-        log::trace!("Dropping Renderer");
+        log::debug!("Dropping Renderer");
         // Just to be sure
         unsafe { self.device.device.device_wait_idle().unwrap() };
         unsafe {
@@ -91,13 +91,13 @@ impl Drop for Renderer {
             self.device
                 .destroy_render_pass(self.render_pass.render_pass, None);
         }
-        log::trace!("Dropping swapchain");
+        log::debug!("Dropping swapchain");
         unsafe {
             self.swapchain
                 .swapchain_loader
                 .destroy_swapchain(self.swapchain.swapchain, None);
         };
-        log::trace!("Dropped swapchain");
+        log::debug!("Dropped swapchain");
     }
 }
 
@@ -346,50 +346,74 @@ fn create_uniform_buffer_from_time(screen_size: (u32, u32)) -> UniformBufferObje
         ..Default::default()
     }
 }
+
+struct FPSCounter {
+    count: u32,
+    time: std::time::Instant,
+}
+impl FPSCounter {
+    fn new() -> Self {
+        Self {
+            count: 0,
+            time: std::time::Instant::now(),
+        }
+    }
+    fn test(&mut self) -> &Self {
+        self.count += 1;
+        if self.time.elapsed().as_secs() >= 1 {
+            log::info!("FPS: {}", self.count);
+            self.count = 0;
+            self.time = std::time::Instant::now();
+        }
+        self
+    }
+}
+
+pub type RunReturnType = i32;
 impl VulkanApp {
     pub fn new() -> anyhow::Result<Self> {
         let _span = log::debug_span!("Creating App").entered();
         let library = VulkanLibrary::new()?;
-        log::debug!("Created library");
+        log::trace!("Created library");
 
         let window = Window::new()?;
-        log::debug!("Created window");
+        log::trace!("Created window");
         let instance = Self::create_instance(&window, &library)?;
-        log::debug!("Created instance");
+        log::trace!("Created instance");
         let surface = library.create_surface(&instance, &window)?;
-        log::debug!("Created surface");
+        log::trace!("Created surface");
         let size = window.window.inner_size();
         let size = (size.width, size.height);
         let (device, swapchainsupport) = instance.create_best_device(&surface, size)?;
-        log::debug!("Created device");
+        log::trace!("Created device");
         let swapchain = instance.create_swapchain(&surface, swapchainsupport, &device)?;
-        log::debug!("Created swapchain");
+        log::trace!("Created swapchain");
         let render_pass = instance.create_render_pass(&device, &swapchain)?;
-        log::debug!("Created render_pass");
+        log::trace!("Created render_pass");
         let pipeline = instance.create_pipeline(&device, &swapchain, &render_pass)?;
-        log::debug!("Created pipeline");
+        log::trace!("Created pipeline");
         let frame_buffers = instance.create_frame_buffers(&device, &swapchain, &render_pass)?;
-        log::debug!("Created framebuffers");
+        log::trace!("Created framebuffers");
         let (command_pool, command_buffers) = instance.create_command_pool(&device)?;
-        log::debug!("Created command pool and buffer");
+        log::trace!("Created command pool and buffer");
         let sync_objects = instance.create_sync_objects(&device)?;
-        log::debug!("Created sync objects");
+        log::trace!("Created sync objects");
         let vertex_buffer = instance.create_buffer_with_data(
             &device,
             &command_pool,
             ash::vk::BufferUsageFlags::VERTEX_BUFFER,
             &VERTICES,
         )?;
-        log::debug!("Created vertex buffer");
+        log::trace!("Created vertex buffer");
         let index_buffer = instance.create_buffer_with_data(
             &device,
             &command_pool,
             ash::vk::BufferUsageFlags::INDEX_BUFFER,
             &INDICES,
         )?;
-        log::debug!("Created index buffer");
+        log::trace!("Created index buffer");
         let uniform_buffers = instance.create_uniform_buffer(&device)?;
-        log::debug!("Created uniform buffers");
+        log::trace!("Created uniform buffers");
 
         let image = instance.create_texture_image_from_path(
             &device,
@@ -397,11 +421,11 @@ impl VulkanApp {
             "/home/reun/all/dev/zenith/examples/vulkan_tutorial/src/assets/textures/statue.jpg"
                 .into(),
         )?;
-        log::debug!("Created Texture");
+        log::trace!("Created Texture");
         let image_sampler = instance.create_image_sampler(&device, &image)?;
-        log::debug!("Created Image Sampler");
+        log::trace!("Created Image Sampler");
         let descriptor_pool = instance.create_descriptor_pool(&device)?;
-        log::debug!("Created descriptor pool");
+        log::trace!("Created descriptor pool");
         let descriptor_sets = instance.create_descriptor_sets(
             &device,
             &descriptor_pool,
@@ -410,7 +434,7 @@ impl VulkanApp {
             &image,
             &pipeline,
         )?;
-        log::debug!("Created descriptor sets");
+        log::trace!("Created descriptor sets");
 
         Ok(Self {
             window,
@@ -480,11 +504,13 @@ impl VulkanApp {
         Ok(instance)
     }
 
-    pub fn run(&mut self) -> anyhow::Result<()> {
+    pub fn run(&mut self) -> anyhow::Result<RunReturnType> {
         let _span = log::info_span!("Running App").entered();
         use winit::event::*;
         use winit::event_loop::ControlFlow;
         let mut dirty: bool = false;
+        let mut fps = FPSCounter::new();
+
         let run_return = winit::platform::run_return::EventLoopExtRunReturn::run_return(
             &mut self.window.event_loop,
             |event, _, control_flow| {
@@ -521,6 +547,7 @@ impl VulkanApp {
                                     .recreate_swapchain(&self.window.window)
                                     .unwrap();
                             }
+                            fps.test();
                             dirty = self.renderer.draw_frame();
                         }
                     }
@@ -530,21 +557,17 @@ impl VulkanApp {
             },
         );
         unsafe { self.renderer.device.device_wait_idle().unwrap() };
-        log::debug!("App run finished with code {:?}", run_return);
-        Ok(())
+        Ok(run_return)
     }
 }
 
 use ash::vk::{
-    CommandBufferResetFlags, ExtScalarBlockLayoutFn, ImageViewCreateInfo,
-    PhysicalDeviceScalarBlockLayoutFeatures, PhysicalDeviceScalarBlockLayoutFeaturesEXT,
-    SemaphoreCreateInfo, ShaderModuleCreateInfo,
+    CommandBufferResetFlags, ImageViewCreateInfo, SemaphoreCreateInfo, ShaderModuleCreateInfo,
 };
 use std::{
     borrow::Cow,
     ffi::{CStr, CString},
     fmt::Debug,
-    ops::Deref,
 };
 use zenith::log;
 
@@ -573,16 +596,15 @@ impl Window {
         let surface_extensions =
             ash_window::enumerate_required_extensions(self.window.raw_display_handle())?;
         Ok(surface_extensions
-            .into_iter()
+            .iter()
             .map(|ext| unsafe { CStr::from_ptr(*ext) }.into())
-            .collect::<Vec<_>>()
-            .into())
+            .collect::<Vec<_>>())
     }
 }
 
 impl Drop for Window {
     fn drop(&mut self) {
-        log::trace!("Dropping window");
+        log::debug!("Dropping window");
     }
 }
 
@@ -594,12 +616,12 @@ pub struct VulkanLibrary {
 const VULKAN_API_VERSION: u32 = ash::vk::make_api_version(0, 1, 3, 250);
 const ENGINE_VERSION: u32 = ash::vk::make_api_version(0, 0, 0, 1);
 
-const ENGINE_NAME: &'static CStr = cstr::cstr!("Zenith");
+const ENGINE_NAME: &CStr = cstr::cstr!("Zenith");
 #[derive(Debug, smart_default::SmartDefault)]
 pub struct InstanceCreateInfo<'a> {
     #[default = "Zenith Example"]
     pub application_name: &'a str,
-    #[default(vec![].into())]
+    #[default(vec![])]
     pub enabled_extensions: Vec<Extension<'a>>,
     #[default({
         if cfg!(any(target_os = "macos", target_os = "ios")) {
@@ -609,7 +631,7 @@ pub struct InstanceCreateInfo<'a> {
         }
     })]
     pub flags: ash::vk::InstanceCreateFlags,
-    #[default(vec![].into())]
+    #[default(vec![])]
     pub enabled_layers: Vec<Layer<'a>>,
 }
 
@@ -630,9 +652,9 @@ pub struct Surface {
 
 impl Drop for Surface {
     fn drop(&mut self) {
-        log::trace!("Dropping Surface");
+        log::debug!("Dropping Surface");
         unsafe { self.surface_loader.destroy_surface(self.surface, None) };
-        log::trace!("Dropped Surface");
+        log::debug!("Dropped Surface");
     }
 }
 
@@ -715,12 +737,12 @@ impl Device {
 
 impl Drop for Device {
     fn drop(&mut self) {
-        log::trace!("Dropping device");
+        log::debug!("Dropping device");
 
         unsafe {
             self.device.destroy_device(None);
         }
-        log::trace!("Dropped device");
+        log::debug!("Dropped device");
     }
 }
 
@@ -819,9 +841,9 @@ impl VulkanLibrary {
 
     /// Ensures that all required and optional extensions are supported by the vulkan implementation. Throws an error if any of the required extensions are not supported.
     /// Optionally returns a list of supported optional extensions.
-    pub(crate) fn check_if_extensions_are_supported<'a, 'b>(
+    pub(crate) fn check_if_extensions_are_supported<'b>(
         &self,
-        required_extensions: &[Extension<'a>],
+        required_extensions: &[Extension<'_>],
         optional_extensions: Vec<Extension<'b>>,
     ) -> Result<Vec<Extension<'b>>, ash::vk::Result> {
         let res = self
@@ -834,7 +856,7 @@ impl VulkanLibrary {
             .map(|ext| unsafe { CStr::from_ptr(ext.extension_name.as_ptr()) })
             .collect::<Vec<_>>();
         let all_required_met = required_extensions.iter().fold(true, |acc, ext| {
-            if acc == false {
+            if !acc {
                 false
             } else {
                 let x = available_extensions.iter().any(|av| *av == ext.0);
@@ -849,8 +871,7 @@ impl VulkanLibrary {
             Ok(optional_extensions
                 .into_iter()
                 .filter(|ext| available_extensions.iter().any(|av| *av == ext.0))
-                .collect::<Vec<_>>()
-                .into())
+                .collect::<Vec<_>>())
         } else {
             Err(ash::vk::Result::ERROR_EXTENSION_NOT_PRESENT)
         }
@@ -922,8 +943,8 @@ pub struct Pipeline {
 }
 impl Drop for Pipeline {
     fn drop(&mut self) {
-        log::trace!("Dropping pipeline");
-        log::trace!("Dropped pipeline");
+        log::debug!("Dropping pipeline");
+        log::debug!("Dropped pipeline");
     }
 }
 
@@ -944,7 +965,7 @@ glsl_to_spirv_macro::shader! {
 }
 impl Drop for Instance {
     fn drop(&mut self) {
-        log::trace!("Dropping instance");
+        log::debug!("Dropping instance");
         unsafe {
             self._debug_utils
                 .destroy_debug_utils_messenger(self._debug_messenger, None)
@@ -954,7 +975,7 @@ impl Drop for Instance {
             self.inner
                 .destroy_instance(self.allocation_callbacks.as_ref())
         };
-        log::trace!("Dropped instance");
+        log::debug!("Dropped instance");
     }
 }
 impl Instance {
@@ -978,7 +999,7 @@ impl Instance {
         }
         .unwrap();
 
-        const ENTRY_POINT: &'static CStr = cstr::cstr!("main");
+        const ENTRY_POINT: &CStr = cstr::cstr!("main");
         let fragment_stage = ash::vk::PipelineShaderStageCreateInfo::builder()
             .stage(ash::vk::ShaderStageFlags::FRAGMENT)
             .module(fragment)
@@ -1028,7 +1049,6 @@ impl Instance {
         let dynamic_state_info = ash::vk::PipelineDynamicStateCreateInfo::builder()
             .dynamic_states(&dynamic_states)
             .build();
-        log::trace!("Viewport state");
         let rasterizer = ash::vk::PipelineRasterizationStateCreateInfo::builder()
             .depth_clamp_enable(false)
             .rasterizer_discard_enable(false)
@@ -1189,12 +1209,7 @@ impl Instance {
         window_inner_size: (u32, u32),
     ) -> anyhow::Result<(Device, SwapChainSupport)> {
         let device_extensions = vec![ash::extensions::khr::Swapchain::name()];
-        let (
-            physical_dev,
-            physical_device_properties,
-            swap_chain_support,
-            (graph_index, pres_index),
-        ) = {
+        let (physical_dev, _, swap_chain_support, (graph_index, pres_index)) = {
             let physical_devices = unsafe { self.inner.enumerate_physical_devices() }?;
             let devices_and_properties = physical_devices.into_iter().map(|physical_device| {
                 let properties =
@@ -1380,7 +1395,6 @@ impl Instance {
             .subpasses(&binding3)
             .build();
 
-        log::trace!("Creating render pass {:?}", render_pass_info);
         let render_pass = unsafe { device.device.create_render_pass(&render_pass_info, None) }?;
 
         Ok(RenderPass { render_pass })
@@ -1530,7 +1544,7 @@ impl Instance {
     ) -> anyhow::Result<DeviceBuffer> {
         // TODO: use a external library to allocate memory on the GPU once, then use that memory
         // with the offset variables, to use the buffer for all our buffers.
-        let buffer_size = (std::mem::size_of::<T>() * data.len()) as u64;
+        let buffer_size = std::mem::size_of_val(data) as u64;
 
         let staging_buffer = self.create_buffer(
             device,
@@ -1560,7 +1574,7 @@ impl Instance {
         )?;
         self.copy_buffer(
             device,
-            &command_pool,
+            command_pool,
             &staging_buffer,
             &final_buffer,
             buffer_size,
@@ -1701,7 +1715,7 @@ impl Instance {
         device: &Device,
         command_pool: &CommandPool,
         image: &DeviceImage,
-        format: ash::vk::Format,
+        _format: ash::vk::Format,
         old_layout: ash::vk::ImageLayout,
         new_layout: ash::vk::ImageLayout,
     ) -> anyhow::Result<()> {
@@ -1975,7 +1989,7 @@ impl Instance {
     fn create_image_sampler(
         &self,
         device: &Device,
-        image: &DeviceImage,
+        _image: &DeviceImage,
     ) -> anyhow::Result<Sampler> {
         let properties = unsafe { self.get_physical_device_properties(device.physical_device) };
 
@@ -2039,7 +2053,6 @@ fn query_swapchain_support(
             .get_physical_device_surface_present_modes(physical_device, surface.surface)
     }
     .unwrap();
-    log::trace!("formats: {:?} present_modes: {:?}", formats, present_modes);
     if !(!formats.is_empty() && !present_modes.is_empty()) {
         return None;
     }
@@ -2251,7 +2264,7 @@ unsafe extern "system" fn vulkan_debug_callback(
             zenith::log::info!(msg)
         }
         Severity::VERBOSE => {
-            zenith::log::trace!(msg)
+            zenith::log::debug!(msg)
         }
         _ => {}
     }
