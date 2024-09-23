@@ -98,3 +98,22 @@ opt-level = 1
 [profile.bench]
 lto = true
 codegen-units = 1
+
+
+# Intented for quick development
+[profile.dev]
+opt-level = 0
+debug = true
+lto = false
+
+#Intented for testing
+[profile.release]
+opt-level = 3
+debug = true
+lto = true
+codegen-units = 1
+
+#Intented for distribution
+[profile.dist]
+inherits = "release"
+debug = false

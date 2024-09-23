@@ -11,6 +11,19 @@ test = true
 readme = "../README.md"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[features]
+default = ["winit"]
+# Window Handler
+winit = ["dep:winit"]
+# Potentially 
+#sdl = []
+#glfw = []
+
+# Support Window Managers
+#wayland = []
+#potentially
+#winrt = []
+
 [lib]
 crate-type = ["dylib"]
 [dependencies]
@@ -21,3 +34,4 @@ tracing-subscriber = { workspace = true }
 thiserror = { workspace = true }
 derive_more = { workspace = true }
 nalgebra = { workspace = true }
+winit = { workspace = true, optional = true }
