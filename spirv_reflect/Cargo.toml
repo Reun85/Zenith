@@ -19,6 +19,8 @@ path = "example/mod.rs"
 [toolchain]
 channel = "nightly"
 
+[lib]
+crate-type = ["lib"]
 [dependencies]
 rspirv = { workspace = true }
 thiserror = { workspace = true }

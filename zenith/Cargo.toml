@@ -11,6 +11,8 @@ test = true
 readme = "../README.md"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[lib]
+crate-type = ["dylib"]
 [dependencies]
 smart-default = { workspace = true }
 glsl_to_spirv_macro = { workspace = true }
