@@ -7,6 +7,7 @@
     clippy::style
 )]
 
+mod build_constants;
 pub mod event;
 pub mod log;
 pub mod shaders;
@@ -41,17 +42,27 @@ pub enum Error<App: Application> {
 
 pub fn start_application<App: Application>() -> Result<(), Error<App>> {
     log::create(log::LoggingCreateInfo {
-        level: log::Level::TRACE,
+        level: build_constants::get_logger_level(),
         ..log::LoggingCreateInfo::max()
     })?;
-    let mut app = match App::build() {
-        Ok(x) => x,
-        Err(e) => return Err(Error::External(UserError::BuildError(e))),
+    log::info!("Logging initialized");
+
+    let mut app = {
+        let _s = log::trace_span!("Building application");
+
+        match App::build() {
+            Ok(x) => x,
+            Err(e) => return Err(Error::External(UserError::BuildError(e))),
+        }
     };
 
-    match app.run() {
-        Ok(_) => Ok(()),
-        Err(e) => Err(Error::External(UserError::RunError(e))),
+    {
+        let _s = log::trace_span!("Running application");
+
+        match app.run() {
+            Ok(_) => Ok(()),
+            Err(e) => Err(Error::External(UserError::RunError(e))),
+        }
     }
 }
 
