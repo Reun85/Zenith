@@ -1,5 +1,14 @@
 #![feature(proc_macro_span)]
 #![feature(track_path)]
+#![deny(clippy::correctness, clippy::complexity, clippy::all)]
+#![warn(
+    clippy::perf,
+    clippy::pedantic,
+    clippy::nursery,
+    clippy::suspicious,
+    clippy::style
+)]
+
 extern crate spirv_reflect;
 mod compiler;
 mod parse;

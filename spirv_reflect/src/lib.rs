@@ -7,7 +7,7 @@
 //! dbg!(info.get_descriptor_sets().expect("Failed to extract descriptor bindings"));
 //! ```
 
-#![deny(clippy::correctness, clippy::complexity)]
+#![deny(clippy::correctness, clippy::complexity, clippy::all)]
 #![warn(
     clippy::perf,
     clippy::pedantic,
