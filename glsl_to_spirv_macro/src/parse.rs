@@ -35,17 +35,10 @@ pub(crate) struct Input {
     pub(crate) spirv_version: Option<Sp<shaderc::SpirvVersion>>,
 }
 
+#[derive(Default)]
 struct ShaderBuilderOuter {
     data: Option<KeyValue<Ident, ShaderSourceType>>,
     ty: Option<KeyValue<Ident, LitStr>>,
-}
-impl Default for ShaderBuilderOuter {
-    fn default() -> Self {
-        ShaderBuilderOuter {
-            data: None,
-            ty: None,
-        }
-    }
 }
 struct ShaderBuilder {
     name: Option<KeyValue<Ident, Ident>>,
@@ -306,8 +299,8 @@ impl syn::parse::Parse for Input {
         }
         // All variables are set, check content for conflicts.
 
-        let generate_bindings = generate_bindings.and_then(|x| Some(x.value));
-        let generate_structure = generate_structure.and_then(|x| Some(x.value));
+        let generate_bindings = generate_bindings.map(|x| x.value);
+        let generate_structure = generate_structure.map(|x| x.value);
         let entry_point = entry_point.and_then(|x| match syn::parse_str::<Ident>(&x.value()) {
             Ok(_) => Some(Ident::new(&x.value(), x.value().span())),
             Err(e) => {
@@ -559,8 +552,8 @@ fn validate_multi(inp: Vec<ShaderBuilder>) -> Result<Vec<MultiShaderInfo>> {
                     data: res.data.unwrap().value,
                     ty: ty.unwrap(),
                     entry_point,
-                    generate_bindings: res.generate_bindings.and_then(|x| Some(x.value)),
-                    generate_structure: res.generate_structure.and_then(|x| Some(x.value)),
+                    generate_bindings: res.generate_bindings.map(|x| x.value),
+                    generate_structure: res.generate_structure.map(|x| x.value),
                 })
             } else {
                 None

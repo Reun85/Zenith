@@ -59,7 +59,7 @@ impl Compiler {
                 proc_macro::tracked_path::path(path.to_str().unwrap());
                 let res = std::fs::read_to_string(path)
                     .map_err(|_| file.span().to_error("could not read source file."))?;
-                (res.into(), file.value())
+                (res, file.value())
             }
         };
         let entry_point_name = input.entry_point.to_string();
@@ -323,7 +323,7 @@ impl<'a> InnerInfo<'a> {
     }
 }
 impl<'a> crate::ShaderInfo<'a> {
-    pub fn need_to_recompile<'b>(&self, previous: &Option<InnerInfo>) -> bool {
+    pub fn need_to_recompile(&self, previous: &Option<InnerInfo>) -> bool {
         let previous = match previous {
             None => return true,
             Some(x) => x,
@@ -334,7 +334,7 @@ impl<'a> crate::ShaderInfo<'a> {
             || previous.spirv_version != **self.spirv_version
             || matches!(self.data, crate::ShaderSourceType::Bytes(_))
     }
-    pub fn needs_to_save_new_info<'b>(&self, previous: &Option<InnerInfo>) -> bool {
+    pub fn needs_to_save_new_info(&self, previous: &Option<InnerInfo>) -> bool {
         let previous = match previous {
             None => return true,
             Some(x) => x,
