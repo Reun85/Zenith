@@ -8,7 +8,7 @@ doc = true
 test = true
 
 [dev-dependencies]
-cgmath = { workspace = true }
+nalgebra = { workspace = true }
 shaderc = { workspace = true }
 ash = { workspace = true }
 

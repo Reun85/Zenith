@@ -72,8 +72,7 @@ png = "0.17"
 image = "0.25.2"
 
 # math 
-cgmath = "0.18"
-nalgebra = "0.33.0"
+nalgebra = { version = "0.33.0" }
 
 # windows
 # TODO: is this still true?
