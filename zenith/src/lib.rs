@@ -10,7 +10,6 @@
 mod build_constants;
 pub mod event;
 pub mod log;
-pub mod shaders;
 pub mod undrop;
 pub mod window;
 
