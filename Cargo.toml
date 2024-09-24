@@ -50,6 +50,7 @@ derive_more = { version = "1", features = ["full"] }
 rand = "0.8.5"
 smallvec = "1.13.2"
 cstr = "0.2.12"
+bitflags = "2.6.0"
 
 # serialization
 serde = { version = "1.0.210", features = ["serde_derive"] }
@@ -75,6 +76,7 @@ cgmath = "0.18"
 nalgebra = "0.33.0"
 
 # windows
+# TODO: is this still true?
 # Using a later version brakes raw handles
 raw-window-handle = "0.6.2"
 winit = { version = "0.30.5" }
@@ -85,6 +87,7 @@ syn = { version = "2.0.77" }
 quote = { version = "1.0.37" }
 proc-macro2 = { version = "1.0.86" }
 proc-macro2-diagnostics = "0.10.1"
+
 
 [profile.CI]
 inherits = "dev"
@@ -106,14 +109,14 @@ opt-level = 0
 debug = true
 lto = false
 
-#Intented for testing
+# Intented for testing
 [profile.release]
 opt-level = 3
 debug = true
 lto = true
 codegen-units = 1
 
-#Intented for distribution
+# Intented for distribution
 [profile.dist]
 inherits = "release"
 debug = false
