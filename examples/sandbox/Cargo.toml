@@ -13,7 +13,7 @@ doc = false
 
 [dependencies]
 glsl_to_spirv_macro = { workspace = true }
-zenith = { workspace = true }
+vortex = { workspace = true }
 
 ash = { workspace = true }
 ash-window = { workspace = true }

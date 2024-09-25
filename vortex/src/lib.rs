@@ -1,3 +1,6 @@
+//! # Vortex
+#![feature(optin_builtin_traits)]
+// Start of code
 #![deny(clippy::correctness, clippy::complexity, clippy::all)]
 #![warn(
     clippy::perf,

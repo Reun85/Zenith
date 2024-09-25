@@ -22,6 +22,7 @@ bitflags::bitflags! {
         const InputAndMouse = Self::Input.bits() | Self::Mouse.bits();
     }
 }
+vortex_macros::bitflags_to_vortex_flags!(EventCategories);
 
 use super::EventLike;
 use super::HasStaticCategory;

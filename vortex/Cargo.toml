@@ -1,5 +1,5 @@
 [package]
-name = "zenith"
+name = "vortex"
 version = "0.1.0"
 author = "Reun85"
 repository = "https://github.com/Reun85/Zenith"
@@ -36,3 +36,5 @@ derive_more = { workspace = true }
 nalgebra = { workspace = true }
 winit = { workspace = true, optional = true }
 bitflags = { workspace = true }
+
+vortex_macros = { workspace = true }

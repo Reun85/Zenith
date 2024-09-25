@@ -7,8 +7,8 @@
     clippy::style
 )]
 
-use zenith::log;
-use zenith::Application;
+use vortex::log;
+use vortex::Application;
 
 #[derive(Debug)]
 struct App {}
@@ -30,6 +30,6 @@ impl Application for App {
 }
 
 fn main() -> anyhow::Result<()> {
-    zenith::start_application::<App>()?;
+    vortex::start_application::<App>()?;
     Ok(())
 }

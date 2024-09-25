@@ -418,7 +418,7 @@ impl VulkanApp {
         let image = instance.create_texture_image_from_path(
             &device,
             &command_pool,
-            "/home/reun/all/dev/zenith/examples/vulkan_tutorial/src/assets/textures/statue.jpg"
+            "/home/reun/all/dev/vortex/examples/vulkan_tutorial/src/assets/textures/statue.jpg"
                 .into(),
         )?;
         log::trace!("Created Texture");

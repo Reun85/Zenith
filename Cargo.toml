@@ -3,8 +3,8 @@ members = [
   "examples/sandbox",
   "glsl_to_spirv_macro",
   "spirv_reflect",
-  "zenith",
-  "zenith_macros",
+  "vortex",
+  "vortex_macros",
 ]
 resolver = "2"
 license = "MIT"
@@ -17,9 +17,9 @@ channel = "nightly"
 
 # projects
 # -----------------------------------------------
-[workspace.dependencies.zenith]
+[workspace.dependencies.vortex]
 version = "0.1"
-path = "zenith"
+path = "vortex"
 
 [workspace.dependencies.spirv_reflect]
 version = "0.1"
@@ -28,9 +28,9 @@ path = "spirv_reflect"
 version = "0.1"
 path = "glsl_to_spirv_macro"
 
-[workspace.dependencies.zenith_macros]
+[workspace.dependencies.vortex_macros]
 version = "0.1"
-path = "zenith_macros"
+path = "vortex_macros"
 # -----------------------------------------------
 
 
