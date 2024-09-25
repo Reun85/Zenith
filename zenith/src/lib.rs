@@ -9,6 +9,7 @@
 
 mod build_constants;
 pub mod event;
+pub mod infrastructure;
 pub mod log;
 pub mod undrop;
 pub mod window;
