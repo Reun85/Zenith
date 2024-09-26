@@ -20,6 +20,7 @@ channel = "nightly"
 [workspace.dependencies.vortex]
 version = "0.1"
 path = "vortex"
+default-features = true
 
 [workspace.dependencies.spirv_reflect]
 version = "0.1"
@@ -33,8 +34,6 @@ version = "0.1"
 path = "vortex_macros"
 # -----------------------------------------------
 
-
-# TODO: Add explanation for the dependencies
 [workspace.dependencies]
 # tracing
 tracing = "0.1.40"
@@ -48,7 +47,9 @@ anyhow = { version = "1.0" }
 smart-default = { version = "0.7.1" }
 derive_more = { version = "1", features = ["full"] }
 rand = "0.8.5"
+# make small vectors stay on the stack
 smallvec = "1.13.2"
+# Create static constants C like strings
 cstr = "0.2.12"
 bitflags = "2.6.0"
 
@@ -75,8 +76,6 @@ image = "0.25.2"
 nalgebra = { version = "0.33.0" }
 
 # windows
-# TODO: is this still true?
-# Using a later version brakes raw handles
 raw-window-handle = "0.6.2"
 winit = { version = "0.30.5" }
 
