@@ -1,5 +1,5 @@
 //! # Vortex
-#![feature(optin_builtin_traits)]
+
 // Start of code
 #![deny(clippy::correctness, clippy::complexity, clippy::all)]
 #![warn(
@@ -54,7 +54,7 @@ pub fn start_application<App: Application>() -> Result<(), Error<App>> {
         let _s = log::trace_span!("Building application");
 
         match App::build() {
-            Ok(x) => x,
+            Ok(x) => Box::new(x),
             Err(e) => return Err(Error::External(UserError::BuildError(e))),
         }
     };
