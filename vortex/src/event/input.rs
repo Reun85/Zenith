@@ -22,7 +22,11 @@ bitflags::bitflags! {
         const InputAndMouse = Self::Input.bits() | Self::Mouse.bits();
     }
 }
-vortex_macros::bitflags_to_vortex_flags!(EventCategories);
+impl crate::infrastructure::StateConstains for EventCategories {
+    fn contains(&self, other: &Self) -> bool {
+        self.contains(*other)
+    }
+}
 
 use super::EventLike;
 use super::HasStaticCategory;

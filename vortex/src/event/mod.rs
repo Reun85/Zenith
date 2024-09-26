@@ -3,20 +3,23 @@ pub mod input;
 /// Marker Trait
 pub trait EventCategory
 where
-    Self: crate::infrastructure::Debug + Clone + Hash,
+    Self: crate::infrastructure::Debug + Clone + std::hash::Hash,
 {
     fn contains(&self, other: &Self) -> bool;
 }
 
-// TODO: Change this to own Flags impl trait
 impl EventCategory for () {
     fn contains(&self, other: &Self) -> bool {
         true
     }
 }
+
 impl<T> EventCategory for T
 where
-    T: crate::infrastructure::StateConstains + crate::infrastructure::Debug,
+    T: Clone
+        + std::hash::Hash
+        + crate::infrastructure::StateConstains
+        + crate::infrastructure::Debug,
 {
     fn contains(&self, other: &Self) -> bool {
         crate::infrastructure::StateConstains::contains(self, other)

@@ -15,17 +15,11 @@ where
     /// Should be used for single flag
     fn has_flags(&self, flags: &Self) -> bool;
     /// Should be used for single flag
-    fn set_flags(&mut self, flags: &Self);
-    /// Should be used for multi state flags
-    fn intersects(&self, flags: &Self) -> bool;
+    fn set_flags(&self, flags: &Self) -> Self;
+    /// Should be used for single flag
+    fn rem_flags(&self, flags: &Self) -> Self;
 }
 
 pub trait StateConstains {
     fn contains(&self, other: &Self) -> bool;
-}
-
-impl<T: Flags> StateConstains for T {
-    fn contains(&self, other: &Self) -> bool {
-        self.has_flags(other)
-    }
 }
