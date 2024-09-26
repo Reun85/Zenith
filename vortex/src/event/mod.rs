@@ -1,5 +1,3 @@
-pub mod input;
-
 /// Marker Trait
 pub trait EventCategory
 where

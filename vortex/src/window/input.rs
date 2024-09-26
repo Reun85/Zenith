@@ -28,8 +28,7 @@ impl crate::infrastructure::StateConstains for EventCategories {
     }
 }
 
-use super::EventLike;
-use super::HasStaticCategory;
+use crate::event::{EventLike, HasStaticCategory};
 
 pub mod keyboard {
     use super::{EventCategories, EventLike, HasStaticCategory};
@@ -136,7 +135,7 @@ pub mod window {
     }
 }
 
-impl super::EventLike for Event {
+impl EventLike for Event {
     type Category = EventCategories;
     fn get_category(&self) -> EventCategories {
         match self {
