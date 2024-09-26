@@ -25,7 +25,7 @@ winit = ["dep:winit"]
 #winrt = []
 
 [lib]
-crate-type = ["dylib"]
+crate-type = ["rlib", "dylib"]
 [dependencies]
 smart-default = { workspace = true }
 glsl_to_spirv_macro = { workspace = true }
@@ -38,3 +38,9 @@ winit = { workspace = true, optional = true }
 bitflags = { workspace = true }
 
 vortex_macros = { workspace = true }
+
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = [
+  'cfg(build_type, values("debug","release","dist"))',
+] }
