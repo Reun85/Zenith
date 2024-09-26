@@ -479,77 +479,45 @@ fn is_vector_straddling_inside_struct_aligned(
 
 
 The scalar alignment of the type of an OpTypeStruct member is defined recursively as follows:
-
     A scalar of size N has a scalar alignment of N.
-
     A vector type has a scalar alignment equal to that of its component type.
-
     An array type has a scalar alignment equal to that of its element type.
-
     A structure has a scalar alignment equal to the largest scalar alignment of any of its members.
-
     A matrix type inherits scalar alignment from the equivalent array declaration.
-
 The base alignment of the type of an OpTypeStruct member is defined recursively as follows:
-
     A scalar has a base alignment equal to its scalar alignment.
-
     A two-component vector has a base alignment equal to twice its scalar alignment.
-
     A three- or four-component vector has a base alignment equal to four times its scalar alignment.
-
     An array has a base alignment equal to the base alignment of its element type.
-
     A structure has a base alignment equal to the largest base alignment of any of its members. An empty structure has a base alignment equal to the size of the smallest scalar type permitted by the capabilities declared in the SPIR-V module. (e.g., for a 1 byte aligned empty struct in the StorageBuffer storage class, StorageBuffer8BitAccess or UniformAndStorageBuffer8BitAccess must be declared in the SPIR-V module.)
-
     A matrix type inherits base alignment from the equivalent array declaration.
 
 The extended alignment of the type of an OpTypeStruct member is similarly defined as follows:
-
     A scalar or vector type has an extended alignment equal to its base alignment.
-
     An array or structure type has an extended alignment equal to the largest extended alignment of any of its members, rounded up to a multiple of 16.
-
     A matrix type inherits extended alignment from the equivalent array declaration.
 
 
 
 Standard Buffer Layout
-
-
 Every member of an OpTypeStruct that is required to be explicitly laid out must be aligned according to the first matching rule as follows. If the struct is contained in pointer types of multiple storage classes, it must satisfy the requirements for every storage class used to reference it.
-
     If the scalarBlockLayout feature is enabled on the device and the storage class is Uniform, StorageBuffer, PhysicalStorageBuffer, ShaderRecordBufferKHR, or PushConstant then every member must be aligned according to its scalar alignment.
-
     If the workgroupMemoryExplicitLayoutScalarBlockLayout feature is enabled on the device and the storage class is Workgroup then every member must be aligned according to its scalar alignment.
-
     All vectors must be aligned according to their scalar alignment.
-
     If the uniformBufferStandardLayout feature is not enabled on the device, then any member of an OpTypeStruct with a storage class of Uniform and a decoration of Block must be aligned according to its extended alignment.
-
     Every other member must be aligned according to its base alignment.
 
 NOTE:
 Even if scalar alignment is supported, it is generally more performant to use the base alignment.
-
 The memory layout must obey the following rules:
-
     The Offset decoration of any member must be a multiple of its alignment.
-
     Any ArrayStride or MatrixStride decoration must be a multiple of the alignment of the array or matrix as defined above.
-
 If one of the conditions below applies
-
     The storage class is Uniform, StorageBuffer, PhysicalStorageBuffer, ShaderRecordBufferKHR, or PushConstant, and the scalarBlockLayout feature is not enabled on the device.
-
     The storage class is Workgroup, and either the struct member is not part of a Block or the workgroupMemoryExplicitLayoutScalarBlockLayout feature is not enabled on the device.
-
     The storage class is any other storage class.
-
 then memory layout must also obey the following rules:
-
     Vectors must not improperly straddle, as defined above.
-
     The Offset decoration of a member must not place it between the end of a structure, an array or a matrix and the next multiple of the alignment of that structure, array or matrix.
 
 
