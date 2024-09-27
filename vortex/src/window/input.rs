@@ -100,7 +100,7 @@ pub mod mouse {
 
     #[derive(Debug, derive_more::From)]
     pub struct MoveEvent {
-        pub position: crate::PixelCoordinate,
+        pub position: crate::infrastructure::PixelCoordinate,
     }
     impl HasStaticCategory for MoveEvent {
         type Category = EventCategories;
@@ -127,7 +127,7 @@ pub mod window {
     }
     #[derive(Debug, derive_more::From)]
     pub struct ResizeEvent {
-        pub size: crate::PixelCoordinate,
+        pub size: crate::infrastructure::PixelCoordinate,
     }
     impl HasStaticCategory for ResizeEvent {
         type Category = EventCategories;

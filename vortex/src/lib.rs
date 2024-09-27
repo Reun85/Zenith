@@ -68,5 +68,3 @@ pub fn start_application<App: Application>() -> Result<(), Error<App>> {
         }
     }
 }
-
-type PixelCoordinate = nalgebra::Vector2<u32>;

@@ -23,3 +23,5 @@ where
 pub trait StateConstains {
     fn contains(&self, other: &Self) -> bool;
 }
+
+pub type PixelCoordinate = nalgebra::Vector2<u32>;
