@@ -296,7 +296,7 @@ impl Reflection {
         Self(module)
     }
 
-    ///Parse from a SPIR-V binary.
+    /// Parse from a SPIR-V binary.
     ///
     /// # Errors
     ///
@@ -305,12 +305,18 @@ impl Reflection {
         let module = rspirv::dr::load_bytes(code)?;
         Ok(Self::new(module))
     }
-    // Parse from a SPIR-V binary.
+    /// Parse from a SPIR-V binary.
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if the supplied binary is not valid SPIR-V Code.
     pub fn new_from_spirv_words(words: &[u32]) -> Result<Self> {
         let module = rspirv::dr::load_words(words)?;
         Ok(Self::new(module))
     }
 
+    /// # Errors
+    /// This function returns the SPIR-V code is missing is the `MemoryModel`
     pub fn get_memory_model(&self) -> Result<spirv::MemoryModel> {
         let instr = self
             .0
@@ -358,11 +364,14 @@ impl Reflection {
         let member_names = {
             let mut outer_map: BTreeMap<u32, BTreeMap<u32, &str>> = BTreeMap::new();
 
-            for (outer_key, inner_key, value) in member_names {
+            let iter = member_names
+                .into_iter()
+                .filter_map(|(a, b, c)| b.map(|b| (a, b, c)));
+            for (outer_key, inner_key, value) in iter {
                 outer_map
                     .entry(outer_key)
                     .or_default()
-                    .insert(inner_key.unwrap(), value);
+                    .insert(inner_key, value);
             }
 
             outer_map
@@ -373,9 +382,13 @@ impl Reflection {
         }
     }
 
+    /// # Errors
+    /// Errors if a value is used a unassigned type ID
     pub fn get_all_variables(&self) -> Result<Vec<(Id, StorageClass)>> {
         self.get_all_variables_iter().collect::<Result<Vec<_>>>()
     }
+    /// # Errors
+    /// Iterator elements may be errors if a value is used a unassigned type ID
     pub fn get_all_variables_iter(
         &self,
     ) -> impl Iterator<Item = std::result::Result<(u32, rspirv::spirv::StorageClass), ReflectError>> + '_
@@ -396,6 +409,8 @@ impl Reflection {
                 }
             })
     }
+    /// # Errors
+    /// Errors if a value is used a unassigned type ID
     pub fn get_type_of_variable(&self, id: Id) -> Result<TypeId> {
         let inst = self
             .0
@@ -438,7 +453,7 @@ impl Reflection {
     }
     pub fn get_types(&self) -> Result<BTreeMap<TypeId, Rc<types::Type>>> {
         let mut types = BTreeMap::new();
-        for inst in self.0.types_global_values.iter() {
+        for inst in &self.0.types_global_values {
             match inst.class.opcode {
                 spirv::Op::TypeInt => {
                     let bits = get_operand_at!(inst, Operand::LiteralBit32, 0)? as u16;
@@ -551,7 +566,7 @@ impl Reflection {
                             match op {
                                 Operand::IdRef(typ) => {
                                     let inner = types
-                                        .get(&typ)
+                                        .get(typ)
                                         .ok_or(ReflectError::UnresolvedTypeId(*typ))?
                                         .clone();
                                     Ok(inner)
@@ -578,111 +593,104 @@ impl Reflection {
 
     pub fn get_decorations(&self) -> BTreeMap<Id, Decoration> {
         let mut res = BTreeMap::new();
-        for inst in self.0.annotations.iter() {
-            match inst.class.opcode {
-                spirv::Op::Decorate => {
-                    let target_id = get_operand_at!(inst, Operand::IdRef, 0).unwrap();
-                    let decoration = get_operand_at!(inst, Operand::Decoration, 1).unwrap();
-                    // let mut dec: &Decoration = res.get(&target_id).unwrap_or_default();
-                    let dec = res.entry(target_id).or_insert_with(Decoration::default);
-                    match decoration {
-                        spirv::Decoration::Binding => {
-                            dec.binding =
-                                Some(get_operand_at!(inst, Operand::LiteralBit32, 2).unwrap())
-                        }
-                        spirv::Decoration::Location => {
-                            dec.location =
-                                Some(get_operand_at!(inst, Operand::LiteralBit32, 2).unwrap())
-                        }
-                        spirv::Decoration::Offset => {
-                            dec.offset =
-                                Some(get_operand_at!(inst, Operand::LiteralBit32, 2).unwrap())
-                        }
-                        spirv::Decoration::ArrayStride => {
-                            dec.array_stride =
-                                Some(get_operand_at!(inst, Operand::LiteralBit32, 2).unwrap())
-                        }
-                        spirv::Decoration::DescriptorSet => {
-                            dec.descriptor_set =
-                                Some(get_operand_at!(inst, Operand::LiteralBit32, 2).unwrap())
-                        }
-                        spirv::Decoration::NonWritable => {
-                            dec.nonwritable = true;
-                        }
-                        spirv::Decoration::NonReadable => {
-                            dec.nonreadable = true;
-                        }
-                        spirv::Decoration::BuiltIn => {
-                            dec.builtin = Some(get_operand_at!(inst, Operand::BuiltIn, 2).unwrap())
-                        }
-                        spirv::Decoration::InputAttachmentIndex => {
-                            dec.input_attachment_index =
-                                Some(get_operand_at!(inst, Operand::LiteralBit32, 2).unwrap())
-                        }
-                        _ => {}
+        for inst in &self.0.annotations {
+            if inst.class.opcode == spirv::Op::Decorate {
+                let target_id = get_operand_at!(inst, Operand::IdRef, 0).unwrap();
+                let decoration = get_operand_at!(inst, Operand::Decoration, 1).unwrap();
+                // let mut dec: &Decoration = res.get(&target_id).unwrap_or_default();
+                let dec = res.entry(target_id).or_insert_with(Decoration::default);
+                match decoration {
+                    spirv::Decoration::Binding => {
+                        dec.binding =
+                            Some(get_operand_at!(inst, Operand::LiteralBit32, 2).unwrap());
                     }
+                    spirv::Decoration::Location => {
+                        dec.location =
+                            Some(get_operand_at!(inst, Operand::LiteralBit32, 2).unwrap());
+                    }
+                    spirv::Decoration::Offset => {
+                        dec.offset = Some(get_operand_at!(inst, Operand::LiteralBit32, 2).unwrap());
+                    }
+                    spirv::Decoration::ArrayStride => {
+                        dec.array_stride =
+                            Some(get_operand_at!(inst, Operand::LiteralBit32, 2).unwrap());
+                    }
+                    spirv::Decoration::DescriptorSet => {
+                        dec.descriptor_set =
+                            Some(get_operand_at!(inst, Operand::LiteralBit32, 2).unwrap());
+                    }
+                    spirv::Decoration::NonWritable => {
+                        dec.nonwritable = true;
+                    }
+                    spirv::Decoration::NonReadable => {
+                        dec.nonreadable = true;
+                    }
+                    spirv::Decoration::BuiltIn => {
+                        dec.builtin = Some(get_operand_at!(inst, Operand::BuiltIn, 2).unwrap());
+                    }
+                    spirv::Decoration::InputAttachmentIndex => {
+                        dec.input_attachment_index =
+                            Some(get_operand_at!(inst, Operand::LiteralBit32, 2).unwrap());
+                    }
+                    _ => {}
                 }
-                _ => {}
             }
         }
         res
     }
     pub fn get_member_decoration(&self) -> BTreeMap<Id, BTreeMap<MemberId, Decoration>> {
         let mut res = BTreeMap::new();
-        for inst in self.0.annotations.iter() {
-            match inst.class.opcode {
-                spirv::Op::MemberDecorate => {
-                    let target_id = get_operand_at!(inst, Operand::IdRef, 0).unwrap();
-                    let member_id = get_operand_at!(inst, Operand::LiteralBit32, 1).unwrap();
-                    let decoration = get_operand_at!(inst, Operand::Decoration, 2).unwrap();
-                    let dec = res
-                        .entry(target_id)
-                        .or_insert_with(BTreeMap::new)
-                        .entry(member_id)
-                        .or_insert_with(Decoration::default);
-                    match decoration {
-                        spirv::Decoration::Binding => {
-                            dec.binding =
-                                Some(get_operand_at!(inst, Operand::LiteralBit32, 3).unwrap())
-                        }
-                        spirv::Decoration::Location => {
-                            dec.location =
-                                Some(get_operand_at!(inst, Operand::LiteralBit32, 3).unwrap())
-                        }
-                        spirv::Decoration::Offset => {
-                            dec.offset =
-                                Some(get_operand_at!(inst, Operand::LiteralBit32, 3).unwrap())
-                        }
-                        spirv::Decoration::ArrayStride | spirv::Decoration::MatrixStride => {
-                            dec.array_stride =
-                                Some(get_operand_at!(inst, Operand::LiteralBit32, 3).unwrap())
-                        }
-                        spirv::Decoration::DescriptorSet => {
-                            dec.descriptor_set =
-                                Some(get_operand_at!(inst, Operand::LiteralBit32, 3).unwrap())
-                        }
-                        spirv::Decoration::NonWritable => {
-                            dec.nonwritable = true;
-                        }
-                        spirv::Decoration::NonReadable => {
-                            dec.nonreadable = true;
-                        }
-                        spirv::Decoration::BuiltIn => {
-                            dec.builtin = Some(get_operand_at!(inst, Operand::BuiltIn, 3).unwrap())
-                        }
-                        spirv::Decoration::InputAttachmentIndex => {
-                            dec.input_attachment_index =
-                                Some(get_operand_at!(inst, Operand::LiteralBit32, 3).unwrap())
-                        }
-                        _ => {}
+        for inst in &self.0.annotations {
+            if inst.class.opcode == spirv::Op::MemberDecorate {
+                let target_id = get_operand_at!(inst, Operand::IdRef, 0).unwrap();
+                let member_id = get_operand_at!(inst, Operand::LiteralBit32, 1).unwrap();
+                let decoration = get_operand_at!(inst, Operand::Decoration, 2).unwrap();
+                let dec = res
+                    .entry(target_id)
+                    .or_insert_with(BTreeMap::new)
+                    .entry(member_id)
+                    .or_insert_with(Decoration::default);
+                match decoration {
+                    spirv::Decoration::Binding => {
+                        dec.binding =
+                            Some(get_operand_at!(inst, Operand::LiteralBit32, 3).unwrap());
                     }
+                    spirv::Decoration::Location => {
+                        dec.location =
+                            Some(get_operand_at!(inst, Operand::LiteralBit32, 3).unwrap());
+                    }
+                    spirv::Decoration::Offset => {
+                        dec.offset = Some(get_operand_at!(inst, Operand::LiteralBit32, 3).unwrap());
+                    }
+                    spirv::Decoration::ArrayStride | spirv::Decoration::MatrixStride => {
+                        dec.array_stride =
+                            Some(get_operand_at!(inst, Operand::LiteralBit32, 3).unwrap());
+                    }
+                    spirv::Decoration::DescriptorSet => {
+                        dec.descriptor_set =
+                            Some(get_operand_at!(inst, Operand::LiteralBit32, 3).unwrap());
+                    }
+                    spirv::Decoration::NonWritable => {
+                        dec.nonwritable = true;
+                    }
+                    spirv::Decoration::NonReadable => {
+                        dec.nonreadable = true;
+                    }
+                    spirv::Decoration::BuiltIn => {
+                        dec.builtin = Some(get_operand_at!(inst, Operand::BuiltIn, 3).unwrap());
+                    }
+                    spirv::Decoration::InputAttachmentIndex => {
+                        dec.input_attachment_index =
+                            Some(get_operand_at!(inst, Operand::LiteralBit32, 3).unwrap());
+                    }
+                    _ => {}
                 }
-                _ => {}
             }
         }
         res
     }
 
+    /// # Errors
     /// Only works if the only `ExecutionMode` is `LocalSize`, that is, the `SPIR-V` is a `compute` shader.
     pub fn get_compute_group_size(&self) -> Result<(u32, u32, u32)> {
         for inst in self.0.global_inst_iter() {
@@ -827,7 +835,6 @@ impl Reflection {
             spirv::Op::TypeSampler => DescriptorType::Sampler,
             spirv::Op::TypeImage => {
                 let dim = get_operand_at!(type_instruction, Operand::Dim, 1)?;
-
                 const IMAGE_SAMPLED: u32 = 1;
                 const IMAGE_STORAGE: u32 = 2;
 
@@ -919,7 +926,7 @@ impl Reflection {
         Ok(DescriptorInfo {
             ty: descriptor_type,
             binding_count: BindingCount::One,
-            name: "".to_string(),
+            name: String::new(),
         })
     }
 
@@ -1009,7 +1016,7 @@ impl Reflection {
                         return Err(ReflectError::BindingGlobalParameterBuffer);
                     }
 
-                    descriptor_info.name = name.to_owned();
+                    name.clone_into(&mut descriptor_info.name);
                 }
 
                 let inserted = current_set.insert(binding, descriptor_info);
@@ -1094,7 +1101,9 @@ impl Reflection {
                 Ok(type_size_bytes * type_constant_count)
             }
             spirv::Op::TypeStruct => {
-                if !type_instruction.operands.is_empty() {
+                if type_instruction.operands.is_empty() {
+                    Ok(0)
+                } else {
                     let byte_offset = Self::byte_offset_to_last_var(reflect, type_instruction)?;
                     let last_var_idx = type_instruction.operands.len() - 1;
                     let id_ref = get_operand_at!(type_instruction, Operand::IdRef, last_var_idx)?;
@@ -1102,8 +1111,6 @@ impl Reflection {
                         find_instructions_assigning_to_id(&reflect.types_global_values, id_ref)?;
                     Ok(byte_offset
                         + Self::calculate_variable_size_bytes(reflect, type_instruction)?)
-                } else {
-                    Ok(0)
                 }
             }
             spirv::Op::TypePointer => {
@@ -1126,10 +1133,14 @@ impl Reflection {
                     (a, s) => Err(ReflectError::InvalidAddressingModelAndStorageClass(a, s)),
                 }
             }
-            x => panic!("Size computation for {:?} unsupported", x),
+            x => panic!("Size computation for {x:?} unsupported"),
         }
     }
 
+    /// Returns the push constant range of the shader module.
+    ///
+    /// # Panics
+    /// Panics if there are multiple push constants in the shader module
     pub fn get_push_constant_range(&self) -> Result<Option<PushConstantInfo>, ReflectError> {
         let reflect = &self.0;
 
@@ -1151,9 +1162,8 @@ impl Reflection {
             return Err(ReflectError::TooManyPushConstants);
         }
 
-        let push_constant = match push_constants.into_iter().next() {
-            Some(push_constant) => push_constant,
-            None => return Ok(None),
+        let Some(push_constant) = push_constants.into_iter().next() else {
+            return Ok(None);
         };
 
         let instruction = find_instructions_assigning_to_id(
@@ -1179,11 +1189,13 @@ impl Reflection {
         }))
     }
 
+    #[must_use]
     pub fn disassemble(&self) -> String {
         use rspirv::binary::Disassemble;
         self.0.disassemble()
     }
 }
+#[must_use]
 pub fn filter_instructions_that_have_id(instr: &[Instruction]) -> Vec<&Instruction> {
     let iter = instr.iter();
     iter.filter(|a| get_operand_at!(*a, Operand::IdRef, 0).is_ok())
@@ -1191,6 +1203,8 @@ pub fn filter_instructions_that_have_id(instr: &[Instruction]) -> Vec<&Instructi
 }
 
 /// Returns the first `Instruction` assigning to `id` (ie. `result_id == Some(id)`)
+/// # Errors
+/// Returns an error if no `Instruction` assigns to id
 pub fn find_instructions_assigning_to_id(instr: &[Instruction], id: Id) -> Result<&Instruction> {
     instr
         .iter()
@@ -1198,6 +1212,7 @@ pub fn find_instructions_assigning_to_id(instr: &[Instruction], id: Id) -> Resul
         .ok_or(ReflectError::UnassignedResultId(id))
 }
 /// Returns all "decorators" where the first operand (`Instruction::operands[0]`) equals `IdRef(id)`
+/// # Errors
 /// Gives `Err` if instruction doesn't have `IdRef` at `operand[0]`
 pub fn filter_annotations_with_id(anno: &[Instruction], id: Id) -> Result<Vec<&Instruction>> {
     anno.iter()

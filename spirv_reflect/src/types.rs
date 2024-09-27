@@ -124,25 +124,25 @@ impl Alignment for Type {
 
     fn extended_align(&self) -> u16 {
         match self {
-            Type::Int(x) => x.extended_align(),
-            Type::Float(x) => x.extended_align(),
-            Type::Vector(x) => x.extended_align(),
-            Type::Mat(x) => x.extended_align(),
-            Type::Array(x) => x.extended_align(),
-            Type::RunTimeArray(x) => x.extended_align(),
-            Type::Struct(x) => x.extended_align(),
+            Self::Int(x) => x.extended_align(),
+            Self::Float(x) => x.extended_align(),
+            Self::Vector(x) => x.extended_align(),
+            Self::Mat(x) => x.extended_align(),
+            Self::Array(x) => x.extended_align(),
+            Self::RunTimeArray(x) => x.extended_align(),
+            Self::Struct(x) => x.extended_align(),
         }
     }
 
     fn scalar_align(&self) -> u16 {
         match self {
-            Type::Int(x) => x.scalar_align(),
-            Type::Float(x) => x.scalar_align(),
-            Type::Vector(x) => x.scalar_align(),
-            Type::Mat(x) => x.scalar_align(),
-            Type::Array(x) => x.scalar_align(),
-            Type::RunTimeArray(x) => x.scalar_align(),
-            Type::Struct(x) => x.scalar_align(),
+            Self::Int(x) => x.scalar_align(),
+            Self::Float(x) => x.scalar_align(),
+            Self::Vector(x) => x.scalar_align(),
+            Self::Mat(x) => x.scalar_align(),
+            Self::Array(x) => x.scalar_align(),
+            Self::RunTimeArray(x) => x.scalar_align(),
+            Self::Struct(x) => x.scalar_align(),
         }
     }
 }
@@ -179,7 +179,7 @@ pub struct RunTimeArray {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Struct {
     pub fields: Vec<Rc<Type>>,
-    /// An empty structure has a base alignment equal to the size of the smallest scalar type permitted by the capabilities declared in the SPIR-V module. (e.g., for a 1 byte aligned empty struct in the StorageBuffer storage class, StorageBuffer8BitAccess or UniformAndStorageBuffer8BitAccess must be declared in the SPIR-V module.)
+    /// An empty structure has a base alignment equal to the size of the smallest scalar type permitted by the capabilities declared in the SPIR-V module. (e.g., for a 1 byte aligned empty struct in the `StorageBuffer` storage class, `StorageBuffer8BitAccess` or `UniformAndStorageBuffer8BitAccess` must be declared in the SPIR-V module.)
     pub(super) base_alignment: u16,
     pub(super) block_decor: bool,
 }
@@ -191,7 +191,7 @@ impl MinSize for Int {
 }
 impl Alignment for Int {
     fn scalar_align(&self) -> u16 {
-        let residue = if self.bits % BYTE_SIZE != 0 { 1 } else { 0 };
+        let residue = u16::from(self.bits % BYTE_SIZE != 0);
         self.bits / BYTE_SIZE + residue
     }
     fn base_align(&self) -> u16 {
@@ -209,7 +209,7 @@ impl MinSize for Float {
 
 impl Alignment for Float {
     fn scalar_align(&self) -> u16 {
-        let residue = if self.bits % BYTE_SIZE != 0 { 1 } else { 0 };
+        let residue = u16::from(self.bits % BYTE_SIZE != 0);
         self.bits / BYTE_SIZE + residue
     }
     fn base_align(&self) -> u16 {
@@ -232,9 +232,8 @@ impl Alignment for Vector {
     fn base_align(&self) -> u16 {
         match self.size {
             Size::Size2 => self.inner_type.base_align() * 2,
-            Size::Size3 => self.inner_type.base_align() * 4,
-            Size::Size4 => self.inner_type.base_align() * 4,
-            _ => unreachable!(),
+            Size::Size3 | Size::Size4 => self.inner_type.base_align() * 4,
+            Size::Size1 => unreachable!(),
         }
     }
     fn extended_align(&self) -> u16 {
@@ -277,13 +276,13 @@ impl MinSize for Array {
 }
 impl Alignment for Array {
     fn scalar_align(&self) -> u16 {
-        Array::inner_scalar_align(&self.inner_type)
+        Self::inner_scalar_align(&self.inner_type)
     }
     fn base_align(&self) -> u16 {
-        Array::inner_base_align(&self.inner_type)
+        Self::inner_base_align(&self.inner_type)
     }
     fn extended_align(&self) -> u16 {
-        Array::inner_extended_align(&self.inner_type)
+        Self::inner_extended_align(&self.inner_type)
     }
 }
 impl MinSize for Mat {
@@ -377,7 +376,7 @@ impl Default for DeviceExtensions {
 }
 
 impl Struct {
-    ///
+    #[must_use]
     pub fn get_alignment_type_for_fields(
         &self,
         storage_class: &StorageClass,
@@ -397,18 +396,18 @@ impl Struct {
                     | StorageClass::PhysicalStorageBuffer
                     | &StorageClass::ShaderRecordBufferKHR
                     | StorageClass::PushConstant,
-                ) => AlignmentUsage::Scalar,
-                (
+                )
+                | (
                     _,
                     DeviceExtensions {
                         workgroup_memory_explicit_layout_scalar_block_layout: true,
                         ..
                     },
                     StorageClass::Workgroup,
-                ) => AlignmentUsage::Scalar,
-                (Type::Vector(_), _, _) => AlignmentUsage::Scalar,
+                )
+                | (Type::Vector(_), _, _) => AlignmentUsage::Scalar,
                 (
-                    Type::Struct(Struct {
+                    Type::Struct(Self {
                         block_decor: true, ..
                     }),
                     DeviceExtensions {
@@ -422,6 +421,7 @@ impl Struct {
             .collect()
     }
     /// These offsets are calculated from the start of the struct.
+    #[must_use]
     pub fn get_fields_offset(
         &self,
         ext: &DeviceExtensions,
@@ -458,18 +458,18 @@ fn is_vector_straddling_inside_struct_aligned(
     offset: u32,
 ) -> Result<(), VectorStraddle> {
     let size = vector.inner_type.min_bytes_size();
-    let size = size as u32;
+    let size = u32::from(size);
     let first_byte = offset;
     let last_byte = offset + size;
     if size < 16 {
         let f = first_byte / 16;
         let l = last_byte / 16;
-        (f != l)
-            .then(|| ())
+        (l != f)
+            .then_some(())
             .ok_or(VectorStraddle::OccupiesTwo16ByteBlocks)
     } else {
         (first_byte % 16 != 0)
-            .then(|| ())
+            .then_some(())
             .ok_or(VectorStraddle::NotAlignedTo16ByteBlock)
     }
 }
