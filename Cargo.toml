@@ -18,6 +18,11 @@ channel = "nightly"
 # projects
 # -----------------------------------------------
 
+[workspace.dependencies.vortex]
+version = "0.1"
+path = "vortex"
+default-features = true
+
 
 [workspace.dependencies.spirv_reflect]
 version = "0.1"

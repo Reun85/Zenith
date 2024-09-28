@@ -10,21 +10,19 @@
 use vortex::log;
 use vortex::UserApplication;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 struct App {}
 
 impl UserApplication for App {
-    fn new() -> Result<Self, vortex::UserError> {
-        log::info!("Building application");
-        Ok(Self {})
-    }
-
     fn render(&mut self) {
         log::info!("Ran application");
     }
 }
 
 fn main() -> anyhow::Result<()> {
-    vortex::start_application(App {})?;
+    match vortex::start_application::<App>() {
+        Ok(it) => it,
+        Err(err) => return Err(err)?,
+    };
     Ok(())
 }
