@@ -31,11 +31,16 @@
               [ pkg-config mold clang cmake python3 cargo-watch rustTools ] ++
               # vulkan
               [
+                glslang
+                shaderc # GLSL to SPIRV compiler - glslc
+                shaderc.bin
+                shaderc.static
+                shaderc.dev
+                shaderc.lib
                 vulkan-headers
                 vulkan-loader
                 vulkan-validation-layers
                 vulkan-tools # vulkaninfo
-                shaderc # GLSL to SPIRV compiler - glslc
                 renderdoc # Graphics debugger
                 tracy # Graphics profiler
                 vulkan-tools-lunarg # vkconfig
@@ -59,10 +64,12 @@
               "-C link-arg=-fuse-ld=${pkgs.mold}/bin/mold";
             RUST_SRC_PATH = "${rustTools}/lib/rustlib/src/rust/library";
             LD_LIBRARY_PATH = with pkgs;
-              "$LD_LIBRARY_PATH:${pkgs.stdenv.cc.cc.lib}/lib:${vulkan-loader}/lib:${vulkan-validation-layers}/lib";
+              "$LD_LIBRARY_PATH:${pkgs.stdenv.cc.cc.lib}/lib:${vulkan-loader}/lib:${vulkan-validation-layers}/lib:${wayland}/lib:${libxkbcommon}/lib:${shaderc.lib}/lib";
             VULKAN_SDK = with pkgs; "${vulkan-headers}";
             VK_LAYER_PATH = with pkgs;
               "${vulkan-validation-layers}/share/vulkan/explicit_layer.d";
+            VULKAN_LIB_DIR = "${pkgs.shaderc.lib}/lib";
+            SHADERC_LIB_DIR = with pkgs; "${shaderc.static}/lib";
 
           };
           packages.default = pkgs.rustPlatform.buildRustPackage {
