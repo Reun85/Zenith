@@ -1,10 +1,10 @@
 [workspace]
 members = [
-  "examples/sandbox",
+  "vortex",
   "glsl_to_spirv_macro",
   "spirv_reflect",
-  "vortex",
   "vortex_macros",
+  "examples/sandbox",
 ]
 resolver = "2"
 license = "MIT"
@@ -17,10 +17,7 @@ channel = "nightly"
 
 # projects
 # -----------------------------------------------
-[workspace.dependencies.vortex]
-version = "0.1"
-path = "vortex"
-default-features = true
+
 
 [workspace.dependencies.spirv_reflect]
 version = "0.1"

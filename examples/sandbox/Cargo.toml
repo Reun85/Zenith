@@ -4,16 +4,9 @@ version = "0.0.0"
 edition = "2021"
 publish = false
 
-[[bin]]
-name = "sandbox"
-test = false
-bench = false
-doc = false
-
-
 [dependencies]
 glsl_to_spirv_macro = { workspace = true }
-vortex = { workspace = true }
+vortex = { path = "../../vortex" }
 
 ash = { workspace = true }
 ash-window = { workspace = true }

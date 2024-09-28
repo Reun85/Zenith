@@ -3,18 +3,14 @@ name = "vortex"
 version = "0.1.0"
 author = "Reun85"
 repository = "https://github.com/Reun85/Zenith"
-edition = "2021"
-publish = true
-doc = true
-test = true
 
 readme = "../README.md"
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
 
 [features]
-default = ["winit"]
+# default = ["winit"]
 # Window Handler
-winit = ["dep:winit"]
+# winit = ["dep:winit"]
 # Potentially 
 #sdl = []
 #glfw = []
@@ -24,8 +20,6 @@ winit = ["dep:winit"]
 #potentially
 #winrt = []
 
-[lib]
-crate-type = ["rlib", "dylib"]
 [dependencies]
 smart-default = { workspace = true }
 glsl_to_spirv_macro = { workspace = true }

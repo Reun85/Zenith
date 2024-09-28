@@ -14,9 +14,7 @@ use vortex::UserApplication;
 struct App {}
 
 impl UserApplication for App {
-    type BuildError = ();
-
-    fn new() -> Result<Self, Self::BuildError> {
+    fn new() -> Result<Self, vortex::UserError> {
         log::info!("Building application");
         Ok(Self {})
     }
@@ -27,6 +25,6 @@ impl UserApplication for App {
 }
 
 fn main() -> anyhow::Result<()> {
-    vortex::start_application::<App>()?;
+    vortex::start_application(App {})?;
     Ok(())
 }

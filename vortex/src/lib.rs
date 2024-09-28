@@ -17,14 +17,14 @@ pub mod log;
 pub mod undrop;
 pub mod window;
 
+type UserError = Box<dyn std::error::Error>;
+// If the result is an Err its fine to use box as this will definitely lead to a shutdown.
 pub trait UserApplication
 where
     Self: Sized,
 {
-    type BuildError: crate::infrastructure::Debug + Sized;
-
     /// Pre engine initialization
-    fn new() -> Result<Self, Self::BuildError>;
+    fn new() -> Result<Self, UserError>;
 
     /// Post engine initialization
     fn init(&mut self) {}
@@ -39,19 +39,14 @@ where
 }
 
 #[derive(Debug, thiserror::Error)]
-pub enum UserError<App: UserApplication> {
-    #[error("User Application build returned with error {0:?}")]
-    BuildError(App::BuildError),
-}
-#[derive(Debug, thiserror::Error)]
 pub enum Error<App: UserApplication> {
     #[error(transparent)]
-    External(#[from] UserError<App>),
+    External(#[from] UserApplication::Error),
     #[error(transparent)]
     LoggerError(#[from] log::Error),
 }
 
-pub fn start_application<App: UserApplication>() -> Result<(), Error<App>> {
+pub fn start_application(app: Box<dyn UserApplication>) -> Result<(), Error<App>> {
     log::init_logging()?;
     let mut app = {
         let _s = log::debug_span!("Init application");
