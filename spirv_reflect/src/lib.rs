@@ -91,6 +91,16 @@ pub enum ReflectError {
     UnresolvedTypeId(u32),
     #[error("Invalid Inner type for instruction {0:?}")]
     InvalidInnerType(Instruction),
+    #[error("Length value of instruction does not fit in a u16 {0:?}")]
+    LengthDoesNotFitIn16(Instruction),
+
+    #[error("Duplicate set declaration {0:?}")]
+    DuplicateSetDeclaration(Instruction),
+    #[error("Duplicate binding set {0:?}")]
+    DuplicateBindingSet(Instruction),
+    // TODO: make this a better error
+    #[error("Duplicate binding in set")]
+    DuplicateBindingInSet(),
 }
 
 type Result<V, E = ReflectError> = ::std::result::Result<V, E>;
@@ -290,6 +300,9 @@ pub struct PushConstantInfo {
 }
 
 impl Reflection {
+    const IMAGE_SAMPLED: u32 = 1;
+    const IMAGE_STORAGE: u32 = 2;
+
     // New from module.
     #[must_use]
     pub const fn new(module: Module) -> Self {
@@ -431,10 +444,9 @@ impl Reflection {
                     .find(|inst2| inst2.result_id.is_some_and(|val| val == type_pointer_id))
                     .ok_or(ReflectError::UnresolvedTypeId(type_pointer_id))?;
                 // TODO: What if storageclass of variable and type isn't the same?
-                debug_assert!(
-                    get_operand_at!(inst, Operand::StorageClass, 0)?
-                        == get_operand_at!(type_inst, Operand::StorageClass, 0)?
-                );
+                let x1 = get_operand_at!(inst, Operand::StorageClass, 0)?;
+                let x2 = get_operand_at!(type_inst, Operand::StorageClass, 0)?;
+                debug_assert!(x1 == x2);
 
                 get_operand_at!(type_inst, Operand::IdRef, 1)
             }
@@ -442,6 +454,8 @@ impl Reflection {
         }
     }
     // pub fn get_all_types(&self) -> BTreeMap<u32, TypeInfo> {}
+    /// # Errors
+    /// Returns an error if an element does not have a storage class
     pub fn get_all_variables_with_storage_class(&self, class: StorageClass) -> Result<Vec<Id>> {
         self.get_all_variables_iter()
             .filter_map(|x| match x {
@@ -451,12 +465,16 @@ impl Reflection {
             })
             .collect()
     }
+    /// # Errors
+    /// Returns an error if there is an error reading a type
+    #[allow(clippy::too_many_lines)]
     pub fn get_types(&self) -> Result<BTreeMap<TypeId, Rc<types::Type>>> {
         let mut types = BTreeMap::new();
         for inst in &self.0.types_global_values {
             match inst.class.opcode {
                 spirv::Op::TypeInt => {
-                    let bits = get_operand_at!(inst, Operand::LiteralBit32, 0)? as u16;
+                    let bits = u16::try_from(get_operand_at!(inst, Operand::LiteralBit32, 0)?)
+                        .map_err(|_| ReflectError::LengthDoesNotFitIn16(inst.clone()))?;
                     let issigned = get_operand_at!(inst, Operand::LiteralBit32, 1)? == 1;
                     let type_info = Rc::new(types::Type::Int(types::Int { bits, issigned }));
                     let result_id = inst
@@ -465,7 +483,8 @@ impl Reflection {
                     types.insert(result_id, type_info);
                 }
                 spirv::Op::TypeFloat => {
-                    let bits = get_operand_at!(inst, Operand::LiteralBit32, 0)? as u16;
+                    let bits = u16::try_from(get_operand_at!(inst, Operand::LiteralBit32, 0)?)
+                        .map_err(|_| ReflectError::LengthDoesNotFitIn16(inst.clone()))?;
                     let type_info = Rc::new(types::Type::Float(types::Float { bits }));
                     let result_id = inst
                         .result_id
@@ -479,7 +498,8 @@ impl Reflection {
                         .ok_or(ReflectError::UnresolvedTypeId(typ))?
                         .clone();
 
-                    let len = get_operand_at!(inst, Operand::LiteralBit32, 1)? as u16;
+                    let len = u16::try_from(get_operand_at!(inst, Operand::LiteralBit32, 1)?)
+                        .map_err(|_| ReflectError::LengthDoesNotFitIn16(inst.clone()))?;
                     let type_info = Rc::new(types::Type::Vector(types::Vector {
                         inner_type: inner,
                         size: len.into(),
@@ -496,7 +516,8 @@ impl Reflection {
                         .ok_or(ReflectError::UnresolvedTypeId(typ))?
                         .clone();
 
-                    let len = get_operand_at!(inst, Operand::LiteralBit32, 1)? as u16;
+                    let len = u16::try_from(get_operand_at!(inst, Operand::LiteralBit32, 1)?)
+                        .map_err(ReflectError::TryFromIntError)?;
                     let type_info = Rc::new(types::Type::Mat(types::Mat {
                         inner_type: inner,
                         size: len.into(),
@@ -515,24 +536,25 @@ impl Reflection {
 
                     let len_id = get_operand_at!(inst, Operand::IdRef, 1)?;
 
-                    let len = self
-                        .0
-                        .types_global_values
-                        .iter()
-                        .find_map(|i| {
-                            if i.result_id == Some(len_id) {
-                                match i.class.opcode {
-                                    spirv::Op::Constant => {
-                                        get_operand_at!(i, Operand::LiteralBit32, 0).ok()
+                    let len = u16::try_from(
+                        self.0
+                            .types_global_values
+                            .iter()
+                            .find_map(|i| {
+                                if i.result_id == Some(len_id) {
+                                    match i.class.opcode {
+                                        spirv::Op::Constant => {
+                                            get_operand_at!(i, Operand::LiteralBit32, 0).ok()
+                                        }
+                                        _ => None,
                                     }
-                                    _ => None,
+                                } else {
+                                    None
                                 }
-                            } else {
-                                None
-                            }
-                        })
-                        .ok_or(ReflectError::UnassignedResultId(len_id))?
-                        as u16;
+                            })
+                            .ok_or(ReflectError::UnassignedResultId(len_id))?,
+                    )
+                    .map_err(|_| ReflectError::LengthDoesNotFitIn16(inst.clone()))?;
 
                     let type_info = Rc::new(types::Type::Array(types::Array {
                         inner_type: inner,
@@ -731,6 +753,8 @@ impl Reflection {
     }
 
     /// Returns the descriptor type for a given `OpType*` `Instruction`
+    // TODO: solve clippy lints
+    #[allow(clippy::too_many_lines, clippy::cognitive_complexity)]
     fn get_descriptor_type(
         &self,
         type_instruction: &Instruction,
@@ -742,7 +766,7 @@ impl Reflection {
 
         // Weave with recursive types
         match type_instruction.class.opcode {
-            spirv::Op::TypeVector => {}
+            //spirv::Op::TypeVector => {}
             spirv::Op::TypeArray => {
                 /*
                 %7 = OpTypeVector %6 4                      ; vec4
@@ -835,16 +859,13 @@ impl Reflection {
             spirv::Op::TypeSampler => DescriptorType::Sampler,
             spirv::Op::TypeImage => {
                 let dim = get_operand_at!(type_instruction, Operand::Dim, 1)?;
-                const IMAGE_SAMPLED: u32 = 1;
-                const IMAGE_STORAGE: u32 = 2;
-
                 // TODO: Should this be modeled as an enum in rspirv??
                 let sampled = get_operand_at!(type_instruction, Operand::LiteralBit32, 5)?;
 
                 if dim == spirv::Dim::DimBuffer {
-                    if sampled == IMAGE_SAMPLED {
+                    if sampled == Self::IMAGE_SAMPLED {
                         DescriptorType::UniformTexelBuffer
-                    } else if sampled == IMAGE_STORAGE {
+                    } else if sampled == Self::IMAGE_STORAGE {
                         DescriptorType::StorageTexelBuffer
                     } else {
                         return Err(ReflectError::ImageSampledFieldUnknown(
@@ -854,9 +875,9 @@ impl Reflection {
                     }
                 } else if dim == spirv::Dim::DimSubpassData {
                     DescriptorType::InputAttachment
-                } else if sampled == IMAGE_SAMPLED {
+                } else if sampled == Self::IMAGE_SAMPLED {
                     DescriptorType::SampledImage
-                } else if sampled == IMAGE_STORAGE {
+                } else if sampled == Self::IMAGE_STORAGE {
                     DescriptorType::StorageImage
                 } else {
                     return Err(ReflectError::ImageSampledFieldUnknown(
@@ -932,6 +953,8 @@ impl Reflection {
 
     /// Returns a nested mapping, where the first level maps descriptor set indices (register spaces)
     /// and the second level maps descriptor binding indices (registers) to descriptor information.
+    /// # Errors
+    /// // TODO: fill this
     pub fn get_descriptor_sets(&self) -> Result<BTreeMap<u32, BTreeMap<u32, DescriptorInfo>>> {
         let mut unique_sets = BTreeMap::new();
         let reflect = &self.0;
@@ -967,23 +990,33 @@ impl Reflection {
             })
             .collect::<Result<BTreeMap<_, _>, _>>()?;
 
+        let mut err = Ok(());
         for var in uniform_variables {
             if let Some(var_id) = var.result_id {
                 let annotations = filter_annotations_with_id(&reflect.annotations, var_id)?;
 
                 // TODO: Can also define these as mut
-                let (set, binding) = annotations.iter().filter(|a| a.operands.len() >= 3).fold(
-                    (None, None),
-                    |state, a| {
-                        if let Operand::Decoration(d) = a.operands[1] {
-                            if let Operand::LiteralBit32(i) = a.operands[2] {
+                let (set, binding) = annotations
+                    .iter()
+                    .filter(|inst| inst.operands.len() >= 3)
+                    .fold((None, None), |state, inst| {
+                        if let Operand::Decoration(d) = inst.operands[1] {
+                            if let Operand::LiteralBit32(i) = inst.operands[2] {
                                 match d {
                                     spirv::Decoration::DescriptorSet => {
-                                        assert!(state.0.is_none(), "Set already has a value!");
+                                        if state.0.is_none() {
+                                            err = Err(ReflectError::DuplicateSetDeclaration(
+                                                (*inst).clone(),
+                                            ));
+                                        }
                                         return (Some(i), state.1);
                                     }
                                     spirv::Decoration::Binding => {
-                                        assert!(state.1.is_none(), "Binding already has a value!");
+                                        if state.1.is_none() {
+                                            err = Err(ReflectError::DuplicateBindingSet(
+                                                (*inst).clone(),
+                                            ));
+                                        }
                                         return (state.0, Some(i));
                                     }
                                     _ => {}
@@ -991,8 +1024,7 @@ impl Reflection {
                             }
                         }
                         state
-                    },
-                );
+                    });
 
                 let set = set.ok_or_else(|| ReflectError::MissingSetDecoration(var.clone()))?;
                 let binding =
@@ -1020,12 +1052,14 @@ impl Reflection {
                 }
 
                 let inserted = current_set.insert(binding, descriptor_info);
-                assert!(
-                    inserted.is_none(),
-                    "Can't bind to the same slot twice within the same shader"
-                );
+
+                if inserted.is_none() {
+                    // TODO: create a better err for this
+                    err = Err(ReflectError::DuplicateBindingInSet());
+                }
             }
         }
+        err?;
         Ok(unique_sets)
     }
 
@@ -1061,6 +1095,7 @@ impl Reflection {
             .unwrap_or(0))
     }
 
+    #[allow(clippy::cognitive_complexity)]
     fn calculate_variable_size_bytes(
         reflect: &Module,
         type_instruction: &Instruction,
@@ -1141,6 +1176,8 @@ impl Reflection {
     ///
     /// # Panics
     /// Panics if there are multiple push constants in the shader module
+    /// # Errors
+    /// // TODO: fill this out
     pub fn get_push_constant_range(&self) -> Result<Option<PushConstantInfo>, ReflectError> {
         let reflect = &self.0;
 

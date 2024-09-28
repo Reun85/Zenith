@@ -8,24 +8,21 @@
 )]
 
 use vortex::log;
-use vortex::Application;
+use vortex::UserApplication;
 
 #[derive(Debug)]
 struct App {}
 
-impl Application for App {
+impl UserApplication for App {
     type BuildError = ();
 
-    type RunError = ();
-
-    fn build() -> Result<Self, Self::BuildError> {
+    fn new() -> Result<Self, Self::BuildError> {
         log::info!("Building application");
         Ok(Self {})
     }
 
-    fn run(&mut self) -> Result<(), Self::RunError> {
+    fn render(&mut self) {
         log::info!("Ran application");
-        Ok(())
     }
 }
 

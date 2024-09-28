@@ -45,6 +45,15 @@ pub enum Error {
     SetGlobalDefault(tracing::subscriber::SetGlobalDefaultError),
 }
 
+pub fn init_logging() -> Result<(), Error> {
+    create(LoggingCreateInfo {
+        level: crate::build_constants::get_logger_level(),
+        ..LoggingCreateInfo::max()
+    })?;
+    info!("Logging initialized");
+    Ok(())
+}
+
 pub fn create(info: LoggingCreateInfo) -> Result<(), Error> {
     let LoggingCreateInfo {
         level,

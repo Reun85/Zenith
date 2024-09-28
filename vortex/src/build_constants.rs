@@ -14,4 +14,3 @@ pub fn get_logger_level() -> tracing::Level {
         tracing::Level::TRACE
     }
 }
-
