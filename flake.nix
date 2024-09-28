@@ -8,50 +8,43 @@
     rust-overlay.inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  outputs = {
-    flake-parts,
-    ...
-  }@inputs:
-    flake-parts.lib.mkFlake {inherit inputs;} {
-      systems = ["x86_64-linux" "x86_64-darwin"];
-      perSystem = {
-        config,
-        lib,
-        system,
-        ...
-      }: let
+  outputs = { flake-parts, ... }@inputs:
+    flake-parts.lib.mkFlake { inherit inputs; } {
+      systems = [ "x86_64-linux" "x86_64-darwin" ];
+      perSystem = { config, lib, system, ... }:
+        let
           # overlay Cargo with nightly?
-        pkgs = import inputs.nixpkgs {
-          inherit system;
-          overlays = [inputs.rust-overlay.overlays.default];
-        };
+          pkgs = import inputs.nixpkgs {
+            inherit system;
+            overlays = [ inputs.rust-overlay.overlays.default ];
+          };
           # load in used rust Toolchain to ensure that toolchain is downloaded
-        rustTools = (pkgs.rust-bin.fromRustupToolchainFile
-          ./rust-toolchain.toml)
-        .override {extensions = ["rust-analyzer" "rust-src"];};
-      in {
-        devShells.default = pkgs.mkShell {
-            pureShell =true;
+          rustTools = (pkgs.rust-bin.fromRustupToolchainFile
+            ./rust-toolchain.toml).override {
+              extensions = [ "rust-analyzer" "rust-src" "clippy" "rustfmt" ];
+            };
+        in {
+          devShells.default = pkgs.mkShell {
+            pureShell = true;
             # build time dependencies
-          nativeBuildInputs = with pkgs;[pkg-config mold clang cmake python3 cargo-watch rustTools]  ++
-            # vulkan
-          [
-            vulkan-headers
-            vulkan-loader
-            vulkan-validation-layers
-            vulkan-tools        # vulkaninfo
-            shaderc             # GLSL to SPIRV compiler - glslc
-            renderdoc           # Graphics debugger
-            tracy               # Graphics profiler
-            vulkan-tools-lunarg # vkconfig
-          ];
+            nativeBuildInputs = with pkgs;
+              [ pkg-config mold clang cmake python3 cargo-watch rustTools ] ++
+              # vulkan
+              [
+                vulkan-headers
+                vulkan-loader
+                vulkan-validation-layers
+                vulkan-tools # vulkaninfo
+                shaderc # GLSL to SPIRV compiler - glslc
+                renderdoc # Graphics debugger
+                tracy # Graphics profiler
+                vulkan-tools-lunarg # vkconfig
+              ];
 
-
-          # build and runtime dependencies 
-          buildInputs = with pkgs;[stdenv.cc.cc.lib];
+            # build and runtime dependencies 
+            buildInputs = with pkgs; [ stdenv.cc.cc.lib ];
             # runtime packages
-          packages = with pkgs;
-            [
+            packages = with pkgs; [
               xorg.libXcursor
               xorg.libXrandr
               xorg.libXi
@@ -59,17 +52,17 @@
               wayland-protocols
               wayland-utils
               libxkbcommon
-                ];
-          CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER =
-            lib.optional pkgs.stdenv.isLinux "${pkgs.clang}/bin/clang";
-          RUSTFLAGS =
-            lib.optional pkgs.stdenv.isLinux
-            "-C link-arg=-fuse-ld=${pkgs.mold}/bin/mold";
-          RUST_SRC_PATH = "${rustTools}/lib/rustlib/src/rust/library";
-          LD_LIBRARY_PATH=with pkgs;"$LD_LIBRARY_PATH:${pkgs.stdenv.cc.cc.lib}/lib:${vulkan-loader}/lib:${vulkan-validation-layers}/lib";
-          VULKAN_SDK =  with pkgs;"${vulkan-headers}";
-          VK_LAYER_PATH = with pkgs;"${vulkan-validation-layers}/share/vulkan/explicit_layer.d";
-
+            ];
+            CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER =
+              lib.optional pkgs.stdenv.isLinux "${pkgs.clang}/bin/clang";
+            RUSTFLAGS = lib.optional pkgs.stdenv.isLinux
+              "-C link-arg=-fuse-ld=${pkgs.mold}/bin/mold";
+            RUST_SRC_PATH = "${rustTools}/lib/rustlib/src/rust/library";
+            LD_LIBRARY_PATH = with pkgs;
+              "$LD_LIBRARY_PATH:${pkgs.stdenv.cc.cc.lib}/lib:${vulkan-loader}/lib:${vulkan-validation-layers}/lib";
+            VULKAN_SDK = with pkgs; "${vulkan-headers}";
+            VK_LAYER_PATH = with pkgs;
+              "${vulkan-validation-layers}/share/vulkan/explicit_layer.d";
 
           };
           packages.default = pkgs.rustPlatform.buildRustPackage {
@@ -94,6 +87,6 @@
               platforms = platforms.linux ++ platforms.darwin;
             };
           };
-      };
+        };
     };
 }
