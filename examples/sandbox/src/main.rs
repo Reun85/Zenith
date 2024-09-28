@@ -17,6 +17,10 @@ impl UserApplication for App {
     fn render(&mut self) {
         log::info!("Ran application");
     }
+
+    fn get_title(&self) -> String {
+        "Demo Window".into()
+    }
 }
 
 fn main() -> anyhow::Result<()> {

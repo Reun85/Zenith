@@ -37,6 +37,14 @@ where
 
     /// Runs when the event loop is exiting
     fn exit(&mut self) {}
+
+    fn get_title(&self) -> String;
+    fn get_window_descriptions(&self) -> Vec<window::WindowAttributes> {
+        vec![window::WindowAttributes {
+            title: self.get_title(),
+            ..window::WindowAttributes::default()
+        }]
+    }
 }
 
 pub trait UserApplicationBuilder {
