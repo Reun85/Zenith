@@ -6,6 +6,8 @@ pub use winit::*;
 pub enum Error {
     #[error("Error creating window {0:?}")]
     EventLoopError(#[from] winit::error::EventLoopError),
+    #[error("{0}")]
+    OsError(#[from] winit::error::OsError),
 }
 
 #[derive(Debug, smart_default::SmartDefault)]
@@ -80,16 +82,10 @@ impl winit::application::ApplicationHandler for WinitApplication {
     }
 
     fn resumed(&mut self, event_loop: &event_loop::ActiveEventLoop) {
+        let _ = event_loop;
         match self.state {
             State::Uninit => todo!(),
             State::Init => {
-                self.windows = self
-                    .input
-                    .app
-                    .get_window_descriptions()
-                    .into_iter()
-                    .map(|x| event_loop.create_window(x.into()).unwrap().into())
-                    .collect();
                 self.state = State::Running;
             }
             State::Running => todo!(),
@@ -133,12 +129,30 @@ impl winit::application::ApplicationHandler for WinitApplication {
 }
 
 #[derive(Debug)]
-pub(crate) struct Context {
+pub(crate) struct EventLoop {
     event_loop: event_loop::EventLoop<()>,
 }
 
-impl super::PlatformlessContext for Context {
+#[derive(Debug)]
+pub struct InitContext<'a> {
+    event_loop: &'a mut winit::event_loop::ActiveEventLoop,
+}
+
+impl<'a> super::InitContextLike for InitContext<'a> {
     type WindowType = Window;
+
+    fn create_window(
+        &mut self,
+        attributes: super::WindowAttributes,
+    ) -> Result<Self::WindowType, super::Error> {
+        match self.event_loop.create_window(attributes.into()) {
+            Ok(x) => Ok(x.into()),
+            Err(e) => Err(Into::<Error>::into(e).into()),
+        }
+    }
+}
+
+impl super::EventLoopLike for EventLoop {
     type ApplicationType = WinitApplication;
 
     fn run(self, inp: super::EventLoopInput) -> Result<super::Output, super::Error> {
@@ -169,7 +183,7 @@ impl super::PlatformlessContext for Context {
 }
 
 #[derive(Debug, derive_more::Deref)]
-pub(crate) struct Window {
+pub struct Window {
     window: Box<winit::window::Window>,
 }
 

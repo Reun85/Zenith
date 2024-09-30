@@ -3,7 +3,7 @@ pub mod winit_platform;
 #[cfg(feature = "use-winit")]
 pub use crate::window::winit_platform as platform_impl;
 
-mod input;
+pub mod input;
 
 // TODO: Give this a better name
 #[derive(Debug)]
@@ -20,23 +20,38 @@ pub enum Error {
     PlatformSpecific(#[from] platform_impl::Error),
 }
 
-pub trait PlatformlessContext {
-    type ApplicationType: ApplicationHandler;
+pub trait InitContextLike {
     type WindowType: WindowHandler;
+    /// Create a new window given current context
+    fn create_window(&mut self, attributes: WindowAttributes) -> Result<Self::WindowType, Error>;
+}
+#[derive(Debug)]
+pub struct InitContext<'a>(platform_impl::InitContext<'a>);
+
+impl<'a> InitContextLike for InitContext<'a> {
+    type WindowType = <platform_impl::InitContext<'a> as InitContextLike>::WindowType;
+
+    fn create_window(&mut self, attributes: WindowAttributes) -> Result<Self::WindowType, Error> {
+        self.0.create_window(attributes)
+    }
+}
+
+pub trait EventLoopLike {
+    type ApplicationType: ApplicationHandler;
 
     fn build() -> Self;
+
     /// The main EventLoop of the application resides here
     fn run(self, inp: EventLoopInput) -> Result<Output, Error>;
 }
 
 #[derive(Debug)]
-pub(crate) struct Context(platform_impl::Context);
+pub(crate) struct EventLoop(platform_impl::EventLoop);
 
-impl PlatformlessContext for Context {
-    type WindowType = <platform_impl::Context as PlatformlessContext>::WindowType;
-    type ApplicationType = <platform_impl::Context as PlatformlessContext>::ApplicationType;
+impl EventLoopLike for EventLoop {
+    type ApplicationType = <platform_impl::EventLoop as EventLoopLike>::ApplicationType;
     fn build() -> Self {
-        Self(platform_impl::Context::build())
+        Self(platform_impl::EventLoop::build())
     }
     fn run(self, inp: EventLoopInput) -> Result<Output, Error> {
         self.0.run(inp)

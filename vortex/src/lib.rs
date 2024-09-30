@@ -13,7 +13,6 @@
 extern crate tracing;
 extern crate tracing_subscriber;
 extern crate winit;
-use window::PlatformlessContext;
 
 pub mod build_constants;
 pub mod event;
@@ -21,30 +20,33 @@ pub mod infrastructure;
 pub mod log;
 pub mod undrop;
 pub mod window;
+use window::EventLoopLike;
 
 // If the result is an Err its fine to use box as this will definitely lead to a shutdown.
 pub trait UserApplication
 where
     Self: crate::infrastructure::Debug,
 {
-    /// Post engine initialization
-    fn init(&mut self) {}
-
     /// Run per game update
+    /// Currently unused
     fn update(&mut self) {}
+
     /// Run per each frame update
     fn render(&mut self) {}
 
-    /// Runs when the event loop is exiting
-    fn exit(&mut self) {}
+    fn on_init(&mut self, context: &mut window::EventLoop) {}
 
-    fn get_title(&self) -> String;
-    fn get_window_descriptions(&self) -> Vec<window::WindowAttributes> {
-        vec![window::WindowAttributes {
-            title: self.get_title(),
-            ..window::WindowAttributes::default()
-        }]
+    ///
+    fn on_window_event(
+        &mut self,
+        event: Box<dyn event::EventLike<Category = window::input::EventCategories>>,
+    ) {
+        let _ = event;
     }
+
+    /// This function is always preceded by [WindowCloseEvents](`event::WindowCloseEvent`) to
+    /// [on_window_event](`Self::on_window_event`)
+    fn on_exit(&mut self) {}
 }
 
 pub trait UserApplicationBuilder {
@@ -68,9 +70,7 @@ pub enum Error {
     WindowManager(#[from] window::Error),
 }
 
-/// # Errors
-/// Will return a non recoverable error
-pub fn start_application<App: UserApplicationBuilder>() -> Result<window::Output, Error>
+fn start<App: UserApplicationBuilder>() -> Result<window::Output, Error>
 where
     <App as UserApplicationBuilder>::Application: 'static,
 {
@@ -82,9 +82,9 @@ where
     };
 
     {
-        let window_manager = window::Context::build();
+        let window_context = window::EventLoop::build();
         let ev_inp = window::EventLoopInput { app };
-        let output = window_manager.run(ev_inp)?;
+        let output = window_context.run(ev_inp)?;
         Ok(output)
     }
 }

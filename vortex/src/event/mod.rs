@@ -7,7 +7,7 @@ where
 }
 
 impl EventCategory for () {
-    fn contains(&self, other: &Self) -> bool {
+    fn contains(&self, _: &Self) -> bool {
         true
     }
 }
