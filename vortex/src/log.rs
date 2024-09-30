@@ -6,6 +6,7 @@ pub use tracing::{
 pub extern crate tracing;
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug, smart_default::SmartDefault)]
+#[allow(clippy::struct_excessive_bools)]
 pub struct LoggingCreateInfo {
     #[default(Level::INFO)]
     pub level: Level,
@@ -19,7 +20,8 @@ pub struct LoggingCreateInfo {
     pub with_line_number: bool,
 }
 impl LoggingCreateInfo {
-    pub fn max() -> Self {
+    #[must_use]
+    pub const fn max() -> Self {
         Self {
             level: Level::TRACE,
             span_enter: true,
@@ -28,7 +30,8 @@ impl LoggingCreateInfo {
             with_line_number: true,
         }
     }
-    pub fn min() -> Self {
+    #[must_use]
+    pub const fn min() -> Self {
         Self {
             level: Level::ERROR,
             span_enter: false,
@@ -45,6 +48,8 @@ pub enum Error {
     SetGlobalDefault(tracing::subscriber::SetGlobalDefaultError),
 }
 
+/// # Errors
+/// Returns whether the initializion failed
 pub fn init_logging() -> Result<(), Error> {
     create(LoggingCreateInfo {
         level: crate::build_constants::get_logger_level(),
@@ -54,7 +59,10 @@ pub fn init_logging() -> Result<(), Error> {
     Ok(())
 }
 
+/// # Errors
+/// Returns whether the initializion failed
 pub fn create(info: LoggingCreateInfo) -> Result<(), Error> {
+    use tracing_subscriber::fmt::format::FmtSpan;
     let LoggingCreateInfo {
         level,
         span_enter,
@@ -62,7 +70,6 @@ pub fn create(info: LoggingCreateInfo) -> Result<(), Error> {
         with_file,
         with_line_number: with_file_number,
     } = info;
-    use tracing_subscriber::fmt::format::FmtSpan;
     let int = if span_enter {
         FmtSpan::ENTER
     } else {

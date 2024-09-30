@@ -35,19 +35,21 @@ pub mod keyboard {
 
     #[derive(Debug, derive_more::From, derive_more::IsVariant, derive_more::TryInto)]
     pub enum Event {
-        KeyPress(PressEvent),
-        KeyRelease(ReleaseEvent),
+        KeyPress(Press),
+        KeyRelease(Release),
     }
     #[derive(Debug, derive_more::From)]
     pub struct Key {}
     #[derive(Debug, derive_more::From)]
-    pub struct PressEvent {
+    pub struct Press {
+        pub device_id: crate::window::DeviceID,
         pub key: Key,
         pub repeat: bool,
     }
 
     #[derive(Debug, derive_more::From)]
-    pub struct ReleaseEvent {
+    pub struct Release {
+        pub device_id: crate::window::DeviceID,
         pub key: Key,
     }
 
@@ -55,11 +57,11 @@ pub mod keyboard {
         type Category = EventCategories;
         const CATEGORY: EventCategories = EventCategories::InputAndKeyboard;
     }
-    impl HasStaticCategory for PressEvent {
+    impl HasStaticCategory for Press {
         type Category = EventCategories;
         const CATEGORY: EventCategories = EventCategories::InputAndKeyboard;
     }
-    impl HasStaticCategory for ReleaseEvent {
+    impl HasStaticCategory for Release {
         type Category = EventCategories;
         const CATEGORY: EventCategories = EventCategories::InputAndKeyboard;
     }
@@ -67,12 +69,19 @@ pub mod keyboard {
 pub mod mouse {
     use super::{EventCategories, EventLike, HasStaticCategory};
     #[derive(Debug, derive_more::From)]
-    pub struct Button {}
+    pub enum Button {
+        Left,
+        Right,
+        Middle,
+        Back,
+        Forward,
+        Other(u16),
+    }
     #[derive(Debug, derive_more::From, derive_more::IsVariant, derive_more::TryInto)]
     pub enum Event {
-        MousePress(PressEvent),
-        MouseRelease(ReleaseEvent),
-        MouseMove(MoveEvent),
+        MousePress(Press),
+        MouseRelease(Release),
+        MouseMove(Move),
     }
     impl HasStaticCategory for Event {
         type Category = EventCategories;
@@ -80,29 +89,32 @@ pub mod mouse {
     }
     #[derive(Debug, derive_more::From)]
 
-    pub struct ReleaseEvent {
+    pub struct Release {
+        pub device_id: crate::window::DeviceID,
         pub button: Button,
     }
-    impl HasStaticCategory for ReleaseEvent {
+    impl HasStaticCategory for Release {
         type Category = EventCategories;
         const CATEGORY: EventCategories = EventCategories::InputAndMouse;
     }
 
     #[derive(Debug, derive_more::From)]
-    pub struct PressEvent {
+    pub struct Press {
+        pub device_id: crate::window::DeviceID,
         pub button: Button,
         pub repeat: bool,
     }
-    impl HasStaticCategory for PressEvent {
+    impl HasStaticCategory for Press {
         type Category = EventCategories;
         const CATEGORY: EventCategories = EventCategories::InputAndMouse;
     }
 
     #[derive(Debug, derive_more::From)]
-    pub struct MoveEvent {
-        pub position: crate::infrastructure::PixelCoordinate,
+    pub struct Move {
+        pub device_id: crate::window::DeviceID,
+        pub position: crate::window::Position,
     }
-    impl HasStaticCategory for MoveEvent {
+    impl HasStaticCategory for Move {
         type Category = EventCategories;
         const CATEGORY: EventCategories = EventCategories::InputAndMouse;
     }
@@ -120,14 +132,17 @@ pub mod window {
         const CATEGORY: EventCategories = EventCategories::Window;
     }
     #[derive(Debug, derive_more::From)]
-    pub struct CloseEvent {}
+    pub struct CloseEvent {
+        pub id: crate::window::WindowID,
+    }
     impl HasStaticCategory for CloseEvent {
         type Category = EventCategories;
         const CATEGORY: EventCategories = EventCategories::Window;
     }
     #[derive(Debug, derive_more::From)]
     pub struct ResizeEvent {
-        pub size: crate::infrastructure::PixelCoordinate,
+        pub id: crate::window::WindowID,
+        pub size: crate::window::Size,
     }
     impl HasStaticCategory for ResizeEvent {
         type Category = EventCategories;

@@ -2,6 +2,8 @@
 
 pub use winit::*;
 
+use crate::window::input;
+
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error("Error creating window {0:?}")]
@@ -19,6 +21,9 @@ enum State {
     Suspended,
     Exited,
 }
+
+#[derive(Debug, PartialEq, Eq, derive_more::From)]
+pub struct DeviceID(winit::event::DeviceId);
 
 #[derive(Debug)]
 pub(crate) struct WinitApplication {
@@ -104,8 +109,45 @@ impl winit::application::ApplicationHandler for WinitApplication {
         let window_id: super::WindowID = window_id.into();
         match event {
             WindowEvent::CloseRequested => {
-                println!("The close button was pressed; stopping");
+                let ev = input::Event::Window(input::window::Event::WindowClose(
+                    input::window::CloseEvent { id: window_id },
+                ));
+                self.input.app.on_window_event(&ev);
                 event_loop.exit();
+            }
+            WindowEvent::Resized(size) => {
+                let ev = input::Event::Window(input::window::Event::WindowResize(
+                    input::window::ResizeEvent {
+                        id: window_id,
+                        size: size.into(),
+                    },
+                ));
+                self.input.app.on_window_event(&ev);
+            }
+            WindowEvent::MouseInput {
+                device_id,
+                state,
+                button,
+            } => {
+                let device_id = DeviceID(device_id);
+
+                let ev = match state {
+                    event::ElementState::Pressed => {
+                        input::Event::Mouse(input::mouse::Event::MousePress(input::mouse::Press {
+                            device_id: device_id.into(),
+                            button: button.into(),
+                            // TODO: this is unused
+                            repeat: false,
+                        }))
+                    }
+                    event::ElementState::Released => input::Event::Mouse(
+                        input::mouse::Event::MouseRelease(input::mouse::Release {
+                            device_id: device_id.into(),
+                            button: button.into(),
+                        }),
+                    ),
+                };
+                self.input.app.on_window_event(&ev);
             }
             WindowEvent::RedrawRequested => {
                 // Redraw the application.
@@ -121,7 +163,7 @@ impl winit::application::ApplicationHandler for WinitApplication {
                 // You only need to call this if you've determined that you need to redraw in
                 // applications which do not always need to. Applications that redraw continuously
                 // can render here instead.
-                self.windows[0].as_ref().request_redraw();
+                self.windows[0].0.request_redraw();
             }
             _ => (),
         }
@@ -139,12 +181,10 @@ pub struct InitContext<'a> {
 }
 
 impl<'a> super::InitContextLike for InitContext<'a> {
-    type WindowType = Window;
-
     fn create_window(
         &mut self,
         attributes: super::WindowAttributes,
-    ) -> Result<Self::WindowType, super::Error> {
+    ) -> Result<super::Window, super::Error> {
         match self.event_loop.create_window(attributes.into()) {
             Ok(x) => Ok(x.into()),
             Err(e) => Err(Into::<Error>::into(e).into()),
@@ -182,18 +222,8 @@ impl super::EventLoopLike for EventLoop {
     }
 }
 
-#[derive(Debug, derive_more::Deref)]
-pub struct Window {
-    window: Box<winit::window::Window>,
-}
-
-impl From<winit::window::Window> for Window {
-    fn from(window: winit::window::Window) -> Self {
-        Self {
-            window: Box::new(window),
-        }
-    }
-}
+#[derive(Debug, derive_more::From)]
+pub struct Window(winit::window::Window);
 
 impl From<winit::window::WindowId> for super::WindowID {
     fn from(val: winit::window::WindowId) -> Self {
@@ -206,7 +236,7 @@ impl super::WindowHandler for Window {
         todo!()
     }
     fn get_id(&self) -> super::WindowID {
-        self.window.id().into()
+        self.0.id().into()
     }
 }
 
@@ -232,12 +262,26 @@ impl From<super::WindowAttributes> for winit::window::WindowAttributes {
     }
 }
 
+impl Into<crate::window::input::mouse::Button> for winit::event::MouseButton {
+    fn into(self) -> crate::window::input::mouse::Button {
+        match self {
+            winit::event::MouseButton::Left => crate::window::input::mouse::Button::Left,
+            winit::event::MouseButton::Right => crate::window::input::mouse::Button::Right,
+            winit::event::MouseButton::Middle => crate::window::input::mouse::Button::Middle,
+            winit::event::MouseButton::Back => crate::window::input::mouse::Button::Back,
+            winit::event::MouseButton::Forward => crate::window::input::mouse::Button::Forward,
+            winit::event::MouseButton::Other(x) => crate::window::input::mouse::Button::Other(x),
+        }
+    }
+}
+
 impl From<super::Size> for winit::dpi::Size {
     fn from(val: super::Size) -> Self {
         Self::Physical(winit::dpi::PhysicalSize::new(val.x, val.y))
     }
 }
-/// Size of a window stored in pixels
-pub type Size = nalgebra::Vector2<u32>;
-/// Offset on monitor in pixels
-pub type Position = nalgebra::Vector2<u32>;
+impl Into<super::Size> for winit::dpi::PhysicalSize<u32> {
+    fn into(self) -> super::Size {
+        nalgebra::Vector2::<u32>::new(self.width, self.height).into()
+    }
+}

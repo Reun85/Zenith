@@ -21,27 +21,24 @@ pub enum Error {
 }
 
 pub trait InitContextLike {
-    type WindowType: WindowHandler;
     /// Create a new window given current context
-    fn create_window(&mut self, attributes: WindowAttributes) -> Result<Self::WindowType, Error>;
+    fn create_window(&mut self, attributes: WindowAttributes) -> Result<Window, Error>;
 }
 #[derive(Debug)]
 pub struct InitContext<'a>(platform_impl::InitContext<'a>);
 
 impl<'a> InitContextLike for InitContext<'a> {
-    type WindowType = <platform_impl::InitContext<'a> as InitContextLike>::WindowType;
-
-    fn create_window(&mut self, attributes: WindowAttributes) -> Result<Self::WindowType, Error> {
+    fn create_window(&mut self, attributes: WindowAttributes) -> Result<Window, Error> {
         self.0.create_window(attributes)
     }
 }
 
-pub trait EventLoopLike {
+pub(crate) trait EventLoopLike {
     type ApplicationType: ApplicationHandler;
 
     fn build() -> Self;
 
-    /// The main EventLoop of the application resides here
+    /// The main `EventLoop` of the application resides here
     fn run(self, inp: EventLoopInput) -> Result<Output, Error>;
 }
 
@@ -59,16 +56,25 @@ impl EventLoopLike for EventLoop {
 }
 
 /// Specifically does not require `std::hash::Hash` as most games will have 1 window, using a
-/// HashMap is overkill
+/// `HashMap` is overkill
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
-pub(crate) struct WindowID(u64);
+pub struct WindowID(u64);
 
-/// Size of a window stored in pixels
-#[derive(Debug, Clone, Copy, derive_more::Deref)]
-pub struct Size(nalgebra::Vector2<u32>);
-/// Offset on monitor in pixels
-#[derive(Debug, Clone, Copy, derive_more::Deref)]
-pub struct Position(nalgebra::Vector2<u32>);
+#[derive(Debug, derive_more::From)]
+pub struct Window(platform_impl::Window);
+
+impl WindowHandler for Window {
+    fn get_raw_handle(&self) {
+        self.0.get_raw_handle()
+    }
+
+    fn get_id(&self) -> WindowID {
+        self.0.get_id()
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, derive_more::From)]
+pub struct DeviceID(pub(crate) platform_impl::DeviceID);
 
 bitflags::bitflags! {
     #[repr(transparent)]
@@ -302,9 +308,16 @@ impl Default for WindowAttributes {
     }
 }
 
-pub(crate) trait WindowHandler {
+pub trait WindowHandler {
     fn get_raw_handle(&self);
     fn get_id(&self) -> WindowID;
 }
 
-pub(crate) trait ApplicationHandler {}
+pub trait ApplicationHandler {}
+
+/// Size of a window stored in pixels
+#[derive(Debug, Clone, Copy, derive_more::Deref, derive_more::From)]
+pub struct Size(nalgebra::Vector2<u32>);
+/// Offset on monitor in pixels
+#[derive(Debug, Clone, Copy, derive_more::Deref, derive_more::From)]
+pub struct Position(nalgebra::Vector2<u32>);

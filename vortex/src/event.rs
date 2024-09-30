@@ -1,13 +1,14 @@
 /// Marker Trait
+#[allow(clippy::module_name_repetitions)]
 pub trait EventCategory
 where
-    Self: crate::infrastructure::Debug + Clone + std::hash::Hash,
+    Self: crate::infrastructure::VortexDebug + Clone + std::hash::Hash,
 {
     fn contains(&self, other: &Self) -> bool;
 }
 
 impl EventCategory for () {
-    fn contains(&self, _: &Self) -> bool {
+    fn contains(&self, (): &Self) -> bool {
         true
     }
 }
@@ -17,7 +18,7 @@ where
     T: Clone
         + std::hash::Hash
         + crate::infrastructure::StateConstains
-        + crate::infrastructure::Debug,
+        + crate::infrastructure::VortexDebug,
 {
     fn contains(&self, other: &Self) -> bool {
         crate::infrastructure::StateConstains::contains(self, other)
@@ -25,9 +26,10 @@ where
 }
 
 /// Marker Trait for data types that may be dispatched using  `EventDispatcher`
+#[allow(clippy::module_name_repetitions)]
 pub trait EventLike
 where
-    Self: crate::infrastructure::Debug,
+    Self: crate::infrastructure::VortexDebug,
 {
     /// The `EventCategory` this Event belongs to
     /// set to () if you don't wish to use `EventCategory`-s
@@ -52,6 +54,7 @@ impl<T: HasStaticCategory> EventLike for T {
 }
 
 /// Marker Trait for data types that may can be a callback for `EventDispatcher`
+#[allow(clippy::module_name_repetitions)]
 pub trait EventCallbackLike<E: EventLike> {
     /// Returns whether the event was handled
     fn call(&self, event: &E) -> bool;
@@ -84,7 +87,7 @@ where
 }
 
 impl<E: EventLike> BasicDispatcher<E> {
-    fn new(event: E) -> Self {
+    const fn new(event: E) -> Self {
         Self {
             event,
             handled: false,
