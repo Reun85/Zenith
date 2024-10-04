@@ -77,3 +77,5 @@ impl PhantomUnDrop {
 }
 #[allow(non_upper_case_globals)]
 pub const PhantomUnDrop: PhantomUnDrop = PhantomUnDrop { helper: Helper };
+
+pub mod unsafe_ref;

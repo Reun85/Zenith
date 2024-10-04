@@ -1,5 +1,5 @@
 //! # Vortex
-
+#![feature(negative_impls)]
 // Start of code
 #![deny(clippy::correctness, clippy::complexity, clippy::all)]
 #![warn(clippy::perf, clippy::suspicious, clippy::style)]

@@ -186,7 +186,7 @@ impl<'a> super::InitContextLike for InitContext<'a> {
         attributes: super::WindowAttributes,
     ) -> Result<super::Window, super::Error> {
         match self.event_loop.create_window(attributes.into()) {
-            Ok(x) => Ok(x.into()),
+            Ok(x) => Ok(Into::<Window>::into(x).into()),
             Err(e) => Err(Into::<Error>::into(e).into()),
         }
     }
@@ -222,8 +222,14 @@ impl super::EventLoopLike for EventLoop {
     }
 }
 
-#[derive(Debug, derive_more::From)]
+#[derive(Debug)]
 pub struct Window(winit::window::Window);
+
+impl From<winit::window::Window> for Window {
+    fn from(value: winit::window::Window) -> Self {
+        Self(value)
+    }
+}
 
 impl From<winit::window::WindowId> for super::WindowID {
     fn from(val: winit::window::WindowId) -> Self {
