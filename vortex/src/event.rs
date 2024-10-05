@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 /// Marker Trait
 #[allow(clippy::module_name_repetitions)]
 pub trait EventCategory
@@ -86,7 +87,10 @@ where
     handled: bool,
 }
 
-impl<E: EventLike> BasicDispatcher<E> {
+impl<E> BasicDispatcher<E>
+where
+    E: EventLike,
+{
     const fn new(event: E) -> Self {
         Self {
             event,
@@ -100,7 +104,7 @@ impl<E: EventLike> Dispatcher<E> for BasicDispatcher<E> {
         &mut self,
         callback: impl EventCallbackLike<E>,
     ) {
-        if !self.handled {
+        if self.handled {
             return;
         }
         let category = self.event.get_category();
