@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 #[cfg(debug)]
 type UnsafeCellInner<T> = std::cell::RefCell<T>;
 #[cfg(not(debug))]
@@ -164,5 +166,38 @@ impl<T: Ord> Ord for UnsafeCell<T> {
 impl<T: std::fmt::Debug> std::fmt::Debug for UnsafeCell<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.inner.fmt(f)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use std::ops::DerefMut;
+
+    use super::*;
+    #[test]
+    fn multiple_unmutable_refs() {
+        let x = UnsafeCell::new(5);
+        let y = unsafe { x.get() };
+        let z = unsafe { x.get() };
+        assert!(*y == 5);
+        assert!(*z == 5);
+    }
+
+    #[test]
+    fn single_unmutable() {
+        let x = UnsafeCell::new(5);
+        let mut y = unsafe { x.get_mut() };
+        assert!(*y == 5);
+        *y.deref_mut() = 10;
+        drop(y);
+        assert!(*unsafe { x.get() } == 10);
+    }
+
+    #[test]
+    #[should_panic]
+    fn broken() {
+        let x = UnsafeCell::new(5);
+        let _z = unsafe { x.get() };
+        let mut _y = unsafe { x.get_mut() };
     }
 }
