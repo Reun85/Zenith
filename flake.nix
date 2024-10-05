@@ -71,6 +71,7 @@
             VULKAN_LIB_DIR = "${pkgs.shaderc.lib}/lib";
             SHADERC_LIB_DIR = with pkgs; "${shaderc.static}/lib";
 
+            RUST_BACKTRACE = "full";
           };
           packages.default = pkgs.rustPlatform.buildRustPackage {
             pname = "my-rust-project";
