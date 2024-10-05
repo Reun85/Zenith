@@ -30,11 +30,6 @@ where
     /// Run per each frame update
     fn render(&mut self) {}
 
-    fn on_init(&mut self, context: &mut window::InitContext) -> Result<(), window::Error> {
-        let _ = context;
-        Ok(())
-    }
-
     fn on_window_event(
         &mut self,
         event: &dyn EventLike<Category = window::input::EventCategories>,
@@ -47,19 +42,6 @@ where
     fn on_exit(&mut self) {}
 }
 
-pub trait UserApplicationBuilder {
-    type Application: UserApplication;
-    fn new() -> Self::Application;
-}
-
-impl<T: Default + UserApplication> UserApplicationBuilder for T {
-    type Application = T;
-
-    fn new() -> Self::Application {
-        Self::default()
-    }
-}
-
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error(transparent)]
@@ -68,22 +50,28 @@ pub enum Error {
     WindowManager(#[from] window::Error),
 }
 
+pub trait UserApplicationBuilder {
+    type Output: UserApplication;
+    fn new(context: &mut window::InitContext) -> Result<Self::Output, Error>;
+}
+
 /// # Errors
 /// Will return an error if logger fails to initialize or the application propagates an error back
-pub fn start<App: UserApplicationBuilder>() -> Result<window::Output, Error>
+pub fn start<AppBuilder: UserApplicationBuilder>() -> Result<window::Output, Error>
 where
-    <App as UserApplicationBuilder>::Application: 'static,
+    <AppBuilder as UserApplicationBuilder>::Output: 'static,
 {
     log::init_logging()?;
-    let app = {
-        let _s = log::debug_span!("Init application");
-
-        Box::new(App::new())
-    };
 
     {
         let window_context = <window::EventLoop as window::EventLoopLike>::build();
-        let ev_inp = window::EventLoopInput { app };
+        let f = |context: &mut window::InitContext| {
+            AppBuilder::new(context).map(|app| Box::new(app) as Box<dyn UserApplication>)
+        };
+        let ev_inp = window::EventLoopInput {
+            app: None,
+            app_creater: Box::new(f),
+        };
         let output = window_context.run(ev_inp)?;
         Ok(output)
     }

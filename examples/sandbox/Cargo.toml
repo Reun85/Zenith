@@ -23,3 +23,6 @@ smallvec = { workspace = true }
 image = { workspace = true }
 winit = { workspace = true }
 nalgebra = { workspace = true }
+
+
+pixels = { version = "0.14.0" }

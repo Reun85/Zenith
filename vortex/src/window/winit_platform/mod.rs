@@ -29,7 +29,6 @@ pub struct DeviceID(winit::event::DeviceId);
 pub(crate) struct WinitApplication {
     /// There is a chance there is a need for more than one window. It is highly unlikely, but we
     /// have to account for it
-    windows: smallvec::SmallVec<[Window; 1]>,
     input: super::EventLoopInput,
     state: State,
 }
@@ -87,11 +86,14 @@ impl winit::application::ApplicationHandler for WinitApplication {
     }
 
     fn resumed(&mut self, event_loop: &event_loop::ActiveEventLoop) {
-        let _ = event_loop;
         match self.state {
             State::Uninit => todo!(),
             State::Init => {
                 self.state = State::Running;
+                self.input.app = Some(
+                    (self.input.app_creater)(&mut super::InitContext(InitContext { event_loop }))
+                        .unwrap(),
+                );
             }
             State::Running => todo!(),
             State::Suspended => todo!(),
@@ -112,7 +114,9 @@ impl winit::application::ApplicationHandler for WinitApplication {
                 let ev = input::Event::Window(input::window::Event::WindowClose(
                     input::window::CloseEvent { id: window_id },
                 ));
-                self.input.app.on_window_event(&ev);
+                if let Some(x) = self.input.app.as_mut() {
+                    x.on_window_event(&ev);
+                }
                 event_loop.exit();
             }
             WindowEvent::Resized(size) => {
@@ -122,7 +126,9 @@ impl winit::application::ApplicationHandler for WinitApplication {
                         size: size.into(),
                     },
                 ));
-                self.input.app.on_window_event(&ev);
+                if let Some(x) = self.input.app.as_mut() {
+                    x.on_window_event(&ev);
+                }
             }
             WindowEvent::MouseInput {
                 device_id,
@@ -147,9 +153,14 @@ impl winit::application::ApplicationHandler for WinitApplication {
                         }),
                     ),
                 };
-                self.input.app.on_window_event(&ev);
+                if let Some(x) = self.input.app.as_mut() {
+                    x.on_window_event(&ev);
+                }
             }
             WindowEvent::RedrawRequested => {
+                if let Some(x) = self.input.app.as_mut() {
+                    x.render();
+                }
                 // Redraw the application.
                 //
                 // It's preferable for applications that do not render continuously to render in
@@ -163,7 +174,6 @@ impl winit::application::ApplicationHandler for WinitApplication {
                 // You only need to call this if you've determined that you need to redraw in
                 // applications which do not always need to. Applications that redraw continuously
                 // can render here instead.
-                self.windows[0].0.request_redraw();
             }
             _ => (),
         }
@@ -177,7 +187,7 @@ pub(crate) struct EventLoop {
 
 #[derive(Debug)]
 pub struct InitContext<'a> {
-    event_loop: &'a mut winit::event_loop::ActiveEventLoop,
+    event_loop: &'a winit::event_loop::ActiveEventLoop,
 }
 
 impl<'a> super::InitContextLike for InitContext<'a> {
@@ -205,7 +215,6 @@ impl super::EventLoopLike for EventLoop {
         // // input, and uses significantly less power/CPU time than ControlFlow::Poll.
         // self.event_loop.set_control_flow(ControlFlow::Wait);
         let mut app = WinitApplication {
-            windows: smallvec::SmallVec::new(),
             input: inp,
             state: State::Uninit,
         };
@@ -225,6 +234,22 @@ impl super::EventLoopLike for EventLoop {
 #[derive(Debug)]
 pub struct Window(winit::window::Window);
 
+impl raw_window_handle::HasDisplayHandle for Window {
+    fn display_handle(
+        &self,
+    ) -> Result<raw_window_handle::DisplayHandle<'_>, raw_window_handle::HandleError> {
+        self.0.display_handle()
+    }
+}
+
+impl raw_window_handle::HasWindowHandle for Window {
+    fn window_handle(
+        &self,
+    ) -> Result<raw_window_handle::WindowHandle<'_>, raw_window_handle::HandleError> {
+        self.0.window_handle()
+    }
+}
+
 impl From<winit::window::Window> for Window {
     fn from(value: winit::window::Window) -> Self {
         Self(value)
@@ -243,6 +268,10 @@ impl super::WindowHandler for Window {
     }
     fn get_id(&self) -> super::WindowID {
         self.0.id().into()
+    }
+
+    fn inner_size(&self) -> super::PhysicalSize {
+        self.0.inner_size().into()
     }
 }
 
@@ -268,9 +297,9 @@ impl From<super::WindowAttributes> for winit::window::WindowAttributes {
     }
 }
 
-impl Into<crate::window::input::mouse::Button> for winit::event::MouseButton {
-    fn into(self) -> crate::window::input::mouse::Button {
-        match self {
+impl From<winit::event::MouseButton> for crate::window::input::mouse::Button {
+    fn from(val: winit::event::MouseButton) -> Self {
+        match val {
             winit::event::MouseButton::Left => crate::window::input::mouse::Button::Left,
             winit::event::MouseButton::Right => crate::window::input::mouse::Button::Right,
             winit::event::MouseButton::Middle => crate::window::input::mouse::Button::Middle,
@@ -281,13 +310,13 @@ impl Into<crate::window::input::mouse::Button> for winit::event::MouseButton {
     }
 }
 
-impl From<super::Size> for winit::dpi::Size {
-    fn from(val: super::Size) -> Self {
-        Self::Physical(winit::dpi::PhysicalSize::new(val.x, val.y))
+impl From<super::PhysicalSize> for winit::dpi::Size {
+    fn from(val: super::PhysicalSize) -> Self {
+        Self::Physical(winit::dpi::PhysicalSize::new(val.width, val.height))
     }
 }
-impl Into<super::Size> for winit::dpi::PhysicalSize<u32> {
-    fn into(self) -> super::Size {
-        nalgebra::Vector2::<u32>::new(self.width, self.height).into()
+impl From<winit::dpi::PhysicalSize<u32>> for super::PhysicalSize {
+    fn from(val: winit::dpi::PhysicalSize<u32>) -> Self {
+        nalgebra::Vector2::<u32>::new(val.width, val.height).into()
     }
 }

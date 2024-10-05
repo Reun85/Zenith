@@ -142,7 +142,7 @@ pub mod window {
     #[derive(Debug, derive_more::From)]
     pub struct ResizeEvent {
         pub id: crate::window::WindowID,
-        pub size: crate::window::Size,
+        pub size: crate::window::PhysicalSize,
     }
     impl HasStaticCategory for ResizeEvent {
         type Category = EventCategories;

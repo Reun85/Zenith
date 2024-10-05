@@ -6,14 +6,13 @@
     clippy::suspicious,
     clippy::style
 )]
-
 use vortex::log;
 use vortex::window::InitContextLike;
 use vortex::UserApplication;
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 struct App {
-    windows: Option<vortex::window::Window>,
+    window: vortex::window::Window,
 }
 
 impl UserApplication for App {
@@ -23,14 +22,6 @@ impl UserApplication for App {
 
     fn update(&mut self) {}
 
-    fn on_init(
-        &mut self,
-        context: &mut vortex::window::InitContext,
-    ) -> Result<(), vortex::window::Error> {
-        self.windows = Some(context.create_window(vortex::window::WindowAttributes::default())?);
-        Ok(())
-    }
-
     fn on_window_event(
         &mut self,
         event: &dyn vortex::event::EventLike<Category = vortex::window::input::EventCategories>,
@@ -39,6 +30,14 @@ impl UserApplication for App {
     }
 
     fn on_exit(&mut self) {}
+}
+
+impl vortex::UserApplicationBuilder for App {
+    type Output = Self;
+    fn new(context: &mut vortex::window::InitContext) -> Result<Self::Output, vortex::Error> {
+        let window = context.create_window(vortex::window::WindowAttributes::default())?;
+        Ok(Self { window })
+    }
 }
 
 fn main() -> anyhow::Result<()> {
