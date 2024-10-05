@@ -14,12 +14,12 @@ pub enum MyEnvVersion {
 impl From<shaderc::EnvVersion> for MyEnvVersion {
     fn from(value: shaderc::EnvVersion) -> Self {
         match value {
-            shaderc::EnvVersion::Vulkan1_0 => MyEnvVersion::Vulkan1_0,
-            shaderc::EnvVersion::Vulkan1_1 => MyEnvVersion::Vulkan1_1,
-            shaderc::EnvVersion::Vulkan1_2 => MyEnvVersion::Vulkan1_2,
-            shaderc::EnvVersion::Vulkan1_3 => MyEnvVersion::Vulkan1_3,
-            shaderc::EnvVersion::OpenGL4_5 => MyEnvVersion::OpenGL4_5,
-            shaderc::EnvVersion::WebGPU => MyEnvVersion::WebGPU,
+            shaderc::EnvVersion::Vulkan1_0 => Self::Vulkan1_0,
+            shaderc::EnvVersion::Vulkan1_1 => Self::Vulkan1_1,
+            shaderc::EnvVersion::Vulkan1_2 => Self::Vulkan1_2,
+            shaderc::EnvVersion::Vulkan1_3 => Self::Vulkan1_3,
+            shaderc::EnvVersion::OpenGL4_5 => Self::OpenGL4_5,
+            shaderc::EnvVersion::WebGPU => Self::WebGPU,
         }
     }
 }

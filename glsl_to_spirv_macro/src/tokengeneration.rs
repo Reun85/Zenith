@@ -1,8 +1,8 @@
-use crate::utils::*;
-pub(crate) fn to_tokens(
+use crate::utils::SpanMessages;
+pub fn to_tokens(
     info: crate::ShaderInfo<'_>,
     words: &[u32],
-    reflection: spirv_reflect::Reflection,
+    reflection: &spirv_reflect::Reflection,
 ) -> syn::Result<proc_macro2::TokenStream> {
     let visibility = quote::quote! {pub};
     let span = info.data.span();
@@ -22,27 +22,31 @@ pub(crate) fn to_tokens(
         // spirv_reflect uses spirv_tools :)
 
         if *info.generate_bindings.value() {
-            create_data_rep(&reflection).map_err(|x| span.to_error(x.to_string()))?
+            create_data_rep(reflection).map_err(|x| span.to_error(x.to_string()))?
         } else {
             proc_macro2::TokenStream::new()
         }
     };
-    Ok(match info.name {
-        None => {
+    if *info.generate_structure.value() {
+        // TODO:
+        // I have forgotten what this should have done
+    }
+    Ok(info.name.map_or_else(
+        || {
             quote::quote_spanned!(span=>
                 #load_func
                 #data
             )
-        }
-        Some(name) => {
+        },
+        |name| {
             quote::quote_spanned! { span=>
                         mod #name {
                            #load_func
                            #data
                         }
             }
-        }
-    })
+        },
+    ))
 }
 
 fn create_data_rep(
@@ -51,21 +55,21 @@ fn create_data_rep(
     let debug_names = reflec.get_debug_names();
     let input_variables =
         reflec.get_all_variables_with_storage_class(spirv_reflect::spirv::StorageClass::Input)?;
-    let uniform_variables =
+    let _uniform_variables =
         reflec.get_all_variables_with_storage_class(spirv_reflect::spirv::StorageClass::Uniform)?;
-    let constant_variables = reflec.get_all_variables_with_storage_class(
+    let _constant_variables = reflec.get_all_variables_with_storage_class(
         spirv_reflect::spirv::StorageClass::UniformConstant,
     )?;
-    let output_variables =
+    let _output_variables =
         reflec.get_all_variables_with_storage_class(spirv_reflect::spirv::StorageClass::Output)?;
-    let decoration = reflec.get_decorations();
-    let member_decoration = reflec.get_member_decoration();
+    let _decoration = reflec.get_decorations();
+    let _member_decoration = reflec.get_member_decoration();
     let types = reflec.get_types()?;
     let inputs = input_variables
         .iter()
         .map(|x| {
             let name = debug_names.get_name(*x).unwrap();
-            syn::Ident::new(&name, proc_macro2::Span::call_site())
+            syn::Ident::new(name, proc_macro2::Span::call_site())
         })
         .collect::<Vec<_>>();
     let inputstype = input_variables
@@ -119,7 +123,7 @@ impl ToTokens for spirv_reflect::types::Float {
 impl ToTokens for spirv_reflect::types::Vector {
     fn to_tokens(&self) -> proc_macro2::TokenStream {
         let len: u16 = self.size.into();
-        let full = format!("Vector{}", len);
+        let full = format!("Vector{len}");
         let full: syn::Type = syn::parse_str(&full).unwrap();
         let inner = self.inner_type.to_tokens();
         quote::quote! (nalgebra::#full<#inner>)
@@ -135,7 +139,7 @@ impl ToTokens for spirv_reflect::types::Mat {
             })
         if size==self.size));
         let len: u16 = self.size.into();
-        let full = format!("Matrix{}", len);
+        let full = format!("Matrix{len}");
         let full: syn::Type = syn::parse_str(&full).unwrap();
         let inner = self.inner_type.to_tokens();
         quote::quote! (nalgebra::#full<#inner>)
@@ -159,13 +163,13 @@ impl ToTokens for spirv_reflect::types::RunTimeArray {
 impl ToTokens for spirv_reflect::types::Type {
     fn to_tokens(&self) -> proc_macro2::TokenStream {
         match self {
-            spirv_reflect::types::Type::Int(x) => x.to_tokens(),
-            spirv_reflect::types::Type::Float(x) => x.to_tokens(),
-            spirv_reflect::types::Type::Vector(x) => x.to_tokens(),
-            spirv_reflect::types::Type::Mat(x) => x.to_tokens(),
-            spirv_reflect::types::Type::Struct(_) => todo!(),
-            spirv_reflect::types::Type::Array(x) => x.to_tokens(),
-            spirv_reflect::types::Type::RunTimeArray(x) => x.to_tokens(),
+            Self::Int(x) => x.to_tokens(),
+            Self::Float(x) => x.to_tokens(),
+            Self::Vector(x) => x.to_tokens(),
+            Self::Mat(x) => x.to_tokens(),
+            Self::Struct(_) => todo!(),
+            Self::Array(x) => x.to_tokens(),
+            Self::RunTimeArray(x) => x.to_tokens(),
         }
     }
 }

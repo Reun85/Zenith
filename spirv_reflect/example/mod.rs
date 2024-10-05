@@ -1,3 +1,4 @@
+#![allow(unused_macros)]
 use spirv_reflect::ReflectError;
 /// Returns the enum variant given at $op if it exists at $idx in $instr.operands
 // NOTE: This has to be a macro since enum variants cannot be used for generics.
@@ -30,10 +31,7 @@ macro_rules! get_operand_at {
     };
 }
 mod compile;
-use rspirv::{
-    dr::{Instruction, Operand},
-    spirv::Op,
-};
+use rspirv::dr::Instruction;
 use spirv_reflect::DebugNames;
 
 struct LessVerboseInstr<'a, 'b>(&'a Instruction, Option<&'a DebugNames<'b>>);
@@ -43,22 +41,19 @@ impl<'a, 'b> std::fmt::Debug for LessVerboseInstr<'a, 'b> {
         match self.1 {
             None => write!(
                 f,
-                "Code: {:18}, Type: {:10}, ResId: {:10}, Op: {}",
-                format!("{:?}", self.0.class.opcode),
-                format!("{:?}", self.0.result_type),
-                format!("{:?}", self.0.result_id),
-                format!("{:?}", self.0.operands),
+                "Code: {:18?}, Type: {:10?}, ResId: {:10?}, Op: {:?}",
+                self.0.class.opcode, self.0.result_type, self.0.result_id, self.0.operands,
             ),
             Some(names) => {
                 let name = { names.get_name_from_instr(self.0) };
                 write!(
                     f,
-                    "Name: {:24}, Code: {:18}, Type: {:10}, ResId: {:10}, Op: {}",
-                    format!("{:?}", name),
-                    format!("{:?}", self.0.class.opcode),
-                    format!("{:?}", self.0.result_type),
-                    format!("{:?}", self.0.result_id),
-                    format!("{:?}", self.0.operands),
+                    "Name: {:24?}, Code: {:18?}, Type: {:10?}, ResId: {:10?}, Op: {:?}",
+                    name,
+                    self.0.class.opcode,
+                    self.0.result_type,
+                    self.0.result_id,
+                    self.0.operands,
                 )
             }
         }
@@ -84,7 +79,7 @@ fn main() -> Result<(), ReflectError> {
     //     println!("{:?}", LessVerboseInstr(x, Some(&debug_names)));
     // });
     // println!("{:#?}", reflec.get_types());
-    let types = reflec.get_types()?;
+    let _types = reflec.get_types()?;
     reflec.0.global_inst_iter().for_each(|x| {
         println!("{:?}", LessVerboseInstr(x, Some(&debug_names)));
     });

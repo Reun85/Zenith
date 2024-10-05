@@ -1,12 +1,11 @@
 use super::ShaderSourceType;
-use crate::utils::*;
+use crate::utils::{CombinedError, KeyValue, Sp, SpanMessages};
 use syn::spanned::Spanned;
-use syn::*;
-
+use syn::{braced, bracketed, Ident, LitBool, LitStr, Result, Token};
 // pub const MANIFEST_DIR_ENV_VAR: &'static str = "CARGO_RUSTC_CURRENT_DIR";
-pub const MANIFEST_DIR_ENV_VAR: &'static str = "CARGO_MANIFEST_DIR";
+pub const MANIFEST_DIR_ENV_VAR: &str = "CARGO_MANIFEST_DIR";
 #[derive(Clone)]
-pub(crate) struct MultiShaderInfo {
+pub struct MultiShaderInfo {
     pub(crate) name: Ident,
     pub(crate) data: ShaderSourceType,
     pub(crate) ty: Sp<shaderc::ShaderKind>,
@@ -15,17 +14,17 @@ pub(crate) struct MultiShaderInfo {
     pub(crate) generate_structure: Option<LitBool>,
 }
 #[derive(Clone)]
-pub(crate) struct SingleShaderInfo {
+pub struct SingleShaderInfo {
     pub(crate) data: ShaderSourceType,
     pub(crate) ty: Sp<shaderc::ShaderKind>,
 }
 #[derive(Clone)]
-pub(crate) enum InputType {
+pub enum InputType {
     Single(SingleShaderInfo),
     Multi(Vec<MultiShaderInfo>),
 }
 #[derive(Clone)]
-pub(crate) struct Input {
+pub struct Input {
     pub(crate) root: Sp<std::path::PathBuf>,
     pub(crate) shaders: InputType,
     pub(crate) generate_bindings: Option<LitBool>,
@@ -50,7 +49,7 @@ struct ShaderBuilder {
     missing_field_span: proc_macro2::Span,
 }
 
-fn parse_key_value_separator(input: &syn::parse::ParseStream) -> Result<()> {
+fn parse_key_value_separator(input: syn::parse::ParseStream) -> Result<()> {
     match input.parse::<Token![=]>() {
         Ok(_) => Ok(()),
         Err(_) => input.parse::<Token![:]>().map(|_| ()),
@@ -59,7 +58,7 @@ fn parse_key_value_separator(input: &syn::parse::ParseStream) -> Result<()> {
 
 impl Default for ShaderBuilder {
     fn default() -> Self {
-        ShaderBuilder {
+        Self {
             name: None,
             data: None,
             ty: None,
@@ -79,20 +78,20 @@ fn check_for_duplicate_set<K: Spanned, V>(
     if let Some(previnner) = prev {
         new.key
             .span()
-            .emit_warning(format!("`{}` has been set twice.", name));
+            .emit_warning(format!("`{name}` has been set twice."));
         previnner
             .key
             .span()
-            .emit_help(format!("`{}` previously set here", name));
+            .emit_help(format!("`{name}` previously set here"));
     }
     *prev = Some(new);
 }
 impl syn::parse::Parse for ShaderBuilder {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-        let mut res = ShaderBuilder::default();
+        let mut res = Self::default();
         while !input.is_empty() {
             let entry = input.parse::<Ident>()?;
-            parse_key_value_separator(&input)?;
+            parse_key_value_separator(input)?;
 
             match entry.to_string().as_str() {
                 "ty" => {
@@ -116,7 +115,7 @@ impl syn::parse::Parse for ShaderBuilder {
                         },
                     };
                     let name = name?;
-                    check_for_duplicate_set(&mut res.name, KeyValue::new(entry, name), "name")
+                    check_for_duplicate_set(&mut res.name, KeyValue::new(entry, name), "name");
                 }
                 "path" => {
                     let src = input.parse::<LitStr>()?;
@@ -174,7 +173,9 @@ impl syn::parse::Parse for ShaderBuilder {
         Ok(res)
     }
 }
+
 impl syn::parse::Parse for Input {
+    #[allow(clippy::too_many_lines)]
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
         let mut shaders: Option<KeyValue<Ident, Vec<ShaderBuilder>>> = None;
         let mut outer = ShaderBuilderOuter::default();
@@ -191,7 +192,7 @@ impl syn::parse::Parse for Input {
         // Set a variable, and if it's already set, send a note.
         while !input.is_empty() {
             let entry = input.parse::<Ident>()?;
-            parse_key_value_separator(&input)?;
+            parse_key_value_separator(input)?;
 
             match entry.to_string().as_str() {
                 "root" => {
@@ -390,15 +391,16 @@ impl syn::parse::Parse for Input {
         let root = match root {
             Some(x) => {
                 let given = std::path::PathBuf::from(x.value());
-                match given.is_absolute() {
-                    true => Sp::new(given, x.value.span()),
-                    false => Sp::new(
+                if given.is_absolute() {
+                    Sp::new(given, x.value.span())
+                } else {
+                    Sp::new(
                         std::path::PathBuf::from(
                             std::env::var(MANIFEST_DIR_ENV_VAR).unwrap_or_else(|_| ".".into()),
                         )
                         .join(given),
                         x.value.span(),
-                    ),
+                    )
                 }
             }
             None => Sp::new_call_site(std::path::PathBuf::from(
@@ -412,8 +414,8 @@ impl syn::parse::Parse for Input {
             generate_bindings,
             generate_structure,
             entry_point,
-            spirv_version,
             vulkan_version,
+            spirv_version,
         })
     }
 }
@@ -423,11 +425,12 @@ fn validate_single(inp: ShaderBuilderOuter) -> Result<SingleShaderInfo> {
     let mut err = CombinedError::new();
     let ty;
     let fine = {
-        let mut fine = true;
-        if inp.data.is_none() {
+        let mut fine = if inp.data.is_none() {
             err.create_new_error(missing_field_span, "missing field 'src` or `path`");
-            fine = false;
-        }
+            false
+        } else {
+            true
+        };
         ty = match inp.ty {
             None => {
                 err.create_new_error(missing_field_span, "missing field 'ty`");
@@ -458,6 +461,7 @@ fn validate_single(inp: ShaderBuilderOuter) -> Result<SingleShaderInfo> {
         Err(err.0.unwrap())
     }
 }
+#[allow(clippy::too_many_lines)]
 fn validate_multi(inp: Vec<ShaderBuilder>) -> Result<Vec<MultiShaderInfo>> {
     let mut err = CombinedError::new();
     let mut duplicates = vec![false; inp.len()];
@@ -481,7 +485,7 @@ fn validate_multi(inp: Vec<ShaderBuilder>) -> Result<Vec<MultiShaderInfo>> {
                     value: name2,
                 }) = &inp[x].name
                 {
-                    duplicates[x] = outername == name2.to_string();
+                    duplicates[x] = *name2 == outername;
                 }
             }
         }
@@ -501,11 +505,12 @@ fn validate_multi(inp: Vec<ShaderBuilder>) -> Result<Vec<MultiShaderInfo>> {
             let name;
             let entry_point;
             let fine = {
-                let mut fine = true;
-                if res.data.is_none() {
+                let mut fine = if res.data.is_none() {
                     err.create_new_error(res.missing_field_span, "missing field 'src` or `path`");
-                    fine = false;
-                }
+                    false
+                } else {
+                    true
+                };
                 name = if let Some(KeyValue { key: _, value: x }) = res.name {
                     Some(x)
                 } else {

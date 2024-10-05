@@ -5,7 +5,7 @@ pub struct KeyValue<K, V> {
     pub value: V,
 }
 impl<K, V> KeyValue<K, V> {
-    pub fn new(key: K, value: V) -> Self {
+    pub const fn new(key: K, value: V) -> Self {
         Self { key, value }
     }
 }

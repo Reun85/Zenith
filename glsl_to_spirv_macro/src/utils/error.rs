@@ -29,10 +29,7 @@ impl CombinedError {
         self.combine(span.to_error(msg));
     }
     pub fn finish(self) -> Result<(), Error> {
-        match self.0 {
-            Some(x) => Err(x),
-            None => Ok(()),
-        }
+        self.0.map_or(Ok(()), Err)
     }
     pub fn attach_result<T>(&mut self, inp: Result<T, Error>) -> Option<T> {
         match inp {
@@ -57,9 +54,9 @@ impl From<syn::Error> for CombinedError {
     }
 }
 
-impl Into<Result<(), syn::Error>> for CombinedError {
-    fn into(self) -> Result<(), syn::Error> {
-        self.finish()
+impl From<CombinedError> for Result<(), syn::Error> {
+    fn from(val: CombinedError) -> Self {
+        val.finish()
     }
 }
 

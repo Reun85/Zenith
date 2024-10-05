@@ -3,7 +3,7 @@
 //!
 //! ```no_run
 //! # let spirv_blob: &[u8] = todo!();
-//! let info = rspirv_reflect::Reflection::new_from_spirv(&spirv_blob).expect("Invalid SPIR-V");
+//! let info = spirv_reflect::Reflection::new_from_spirv(&spirv_blob).expect("Invalid SPIR-V");
 //! dbg!(info.get_descriptor_sets().expect("Failed to extract descriptor bindings"));
 //! ```
 

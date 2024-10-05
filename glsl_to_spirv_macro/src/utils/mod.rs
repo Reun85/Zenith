@@ -7,7 +7,7 @@ pub use error::*;
 pub use key_value::*;
 pub use span::*;
 
-pub(crate) fn debug_msg<T: std::fmt::Display>(msg: T) {
+pub fn debug_msg<T: std::fmt::Display>(msg: T) {
     if cfg!(debug_assertions) {
         proc_macro2::Span::call_site().emit_note(msg);
     }

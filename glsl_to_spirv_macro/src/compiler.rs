@@ -1,6 +1,7 @@
+#![allow(dead_code)]
 use std::{borrow::Cow, cell::RefCell, os::unix::fs::MetadataExt, rc::Rc};
 
-use crate::utils::*;
+use crate::utils::{call_site_err, SpanMessages};
 
 pub struct Compiler {
     shader_compiler: shaderc::Compiler,
@@ -9,7 +10,7 @@ pub struct Compiler {
 #[derive(Debug)]
 #[non_exhaustive]
 #[derive(thiserror::Error)]
-pub enum CompilerInitError {
+pub enum InitError {
     #[error("Could not get shaderc compiler")]
     CompilerMissing,
 }
@@ -28,14 +29,14 @@ impl CompileArtifacts {
 }
 
 impl Compiler {
-    pub fn init() -> Result<Self, CompilerInitError> {
-        let ok_or = shaderc::Compiler::new().ok_or(CompilerInitError::CompilerMissing);
+    pub fn init() -> Result<Self, InitError> {
+        let ok_or = shaderc::Compiler::new().ok_or(InitError::CompilerMissing);
         Ok(Self {
             shader_compiler: ok_or?,
         })
     }
     pub fn compile(&self, input: &crate::ShaderInfo) -> syn::Result<CompileArtifacts> {
-        let input: &crate::ShaderInfo = &input;
+        let input: &crate::ShaderInfo = input;
         let shader_kind = input.ty.value();
 
         let (source_text, name_for_errors) = match input.data {
@@ -44,8 +45,7 @@ impl Compiler {
                 input
                     .name
                     .as_ref()
-                    .map(|x| x.to_string())
-                    .unwrap_or("shader".to_string()),
+                    .map_or("shader".to_string(), std::string::ToString::to_string),
             ),
 
             crate::ShaderSourceType::Path(ref file) => {
@@ -54,7 +54,7 @@ impl Compiler {
                 if !path.exists() {
                     return Err(file
                         .span()
-                        .to_error(format!("file does not exist {:?}", path)));
+                        .to_error(format!("file does not exist {path:?}")));
                 }
                 proc_macro::tracked_path::path(path.to_str().unwrap());
                 let res = std::fs::read_to_string(path)
@@ -64,7 +64,7 @@ impl Compiler {
         };
         let entry_point_name = input.entry_point.to_string();
         let mut additional_options = shaderc::CompileOptions::new()
-            .ok_or(call_site_err("could not create shaderc::CompileOptions"))?;
+            .ok_or_else(|| call_site_err("could not create shaderc::CompileOptions"))?;
         additional_options.set_target_env(
             shaderc::TargetEnv::Vulkan,
             input.vulkan_version.value as u32,
@@ -80,24 +80,20 @@ impl Compiler {
             let mut path = match ty {
                 shaderc::IncludeType::Relative => {
                     let path = std::path::PathBuf::from(&name_of_file);
-                    path.parent()
-                        .map(std::path::Path::to_path_buf)
-                        .map(|x| include_folder.clone().join(x))
-                        .unwrap_or(include_folder.clone())
+                    path.parent().map(std::path::Path::to_path_buf).map_or_else(
+                        || include_folder.clone(),
+                        |x| include_folder.clone().join(x),
+                    )
                 }
                 shaderc::IncludeType::Standard => include_folder.clone(),
             };
             path.push(inc);
 
             if !path.exists() {
-                return Err(format!("file does not exist {:?}", path));
+                return Err(format!("file does not exist {path:?}"));
             }
-            let res = std::fs::read_to_string(path.clone()).map_err(|_| {
-                format!(
-                    "could not read source file {:?} for include {:?}",
-                    path, inc
-                )
-            })?;
+            let res = std::fs::read_to_string(path.clone())
+                .map_err(|_| format!("could not read source file {path:?} for include {inc:?}"))?;
             included_paths.borrow_mut().push(path);
             Ok(shaderc::ResolvedInclude {
                 resolved_name: inc.into(),
@@ -128,16 +124,16 @@ impl Compiler {
         drop(additional_options);
         // TODO: This copies this data.
         let includes: Vec<std::path::PathBuf> = includes.borrow().clone();
+        for path in &includes {
+            proc_macro::tracked_path::path(path.to_str().unwrap());
+        }
         Ok(CompileArtifacts { words, includes })
     }
-    fn local_to_manifest(
-        &self,
-        root: &std::path::Path,
-        path: &std::path::PathBuf,
-    ) -> std::path::PathBuf {
-        let manifest_dir = match std::env::var("CARGO_RUSTC_CURRENT_DIR") {
-            Ok(x) => x,
-            Err(_) => return path.clone(),
+    fn local_to_manifest(root: &std::path::Path, path: &std::path::PathBuf) -> std::path::PathBuf {
+        let manifest_dir = if let Ok(x) = std::env::var("CARGO_RUSTC_CURRENT_DIR") {
+            x
+        } else {
+            return path.clone();
         };
         let manifest_dir = std::path::PathBuf::from(manifest_dir);
         let mut full: std::path::PathBuf = root.into();
@@ -154,10 +150,10 @@ impl Compiler {
         &self,
         info: &crate::ShaderInfo<'_>,
     ) -> syn::Result<(CompileArtifacts, spirv_reflect::Reflection)> {
+        const FILE_EXT: &str = ".bin";
         let span = info.data.span();
         // Get the metadata of the actual file compare that to the previous metadata.....
         // Load previous info
-        const FILE_EXT: &str = ".bin";
         let out_dir = std::env!("OUT_DIR");
 
         let file_name = {
@@ -167,16 +163,13 @@ impl Compiler {
             };
             let file_name = file_name
                 .as_ref()
-                .map(|x| self.local_to_manifest(&info.root.value(), x));
-            let file_name = match file_name {
-                Some(mut path) => {
-                    let mut ext = path.extension().unwrap_or_default().to_os_string();
-                    ext.push(FILE_EXT);
-                    path.set_extension(ext);
-                    Some(std::path::PathBuf::from(out_dir).join(path))
-                }
-                None => None,
-            };
+                .map(|x| Self::local_to_manifest(info.root.value(), x));
+            let file_name = file_name.map(|mut path| {
+                let mut ext = path.extension().unwrap_or_default().to_os_string();
+                ext.push(FILE_EXT);
+                path.set_extension(ext);
+                std::path::PathBuf::from(out_dir).join(path)
+            });
             file_name
         };
 
@@ -197,10 +190,10 @@ impl Compiler {
                 crate::ShaderSourceType::Path(ref file) => {
                     let mut path = info.root.value().clone();
                     path.push(file.value());
-                    if !path.exists() {
-                        None
-                    } else {
+                    if path.exists() {
                         std::fs::File::open(path).ok()
+                    } else {
+                        None
                     }
                 }
             }
@@ -215,45 +208,40 @@ impl Compiler {
         let need_to_save_new_info =
             file_name.is_some() && (info.needs_to_save_new_info(&previous_info) || file_changed);
         let should_recompile = info.need_to_recompile(&previous_info)
-            || match previous_info {
-                Some(ref x) => x.generated_binary.is_none(),
-                None => true,
-            }
+            || previous_info
+                .as_ref()
+                .map_or(true, |x| x.generated_binary.is_none())
             || file_changed;
 
         let mut recompiled = false;
-        let (words, reflection) = if !should_recompile {
+        let (words, reflection) = if should_recompile {
+            (None, None)
+        } else {
             let words = previous_info.and_then(|x| x.generated_binary);
             let reflection = words
                 .as_ref()
                 .and_then(|x| spirv_reflect::Reflection::new_from_spirv_words(&x.words).ok());
             (words, reflection)
-        } else {
-            (None, None)
         };
 
-        let (words, reflection) = match (words, reflection) {
-            (Some(words), Some(reflection)) => (
+        let (words, reflection) = if let (Some(words), Some(reflection)) = (words, reflection) {
+            (
                 match words {
                     Cow::Borrowed(x) => x.clone(),
                     Cow::Owned(x) => x,
                 },
                 reflection,
-            ),
-            _ => {
-                recompiled = true;
-                let iwords = self.compile(info)?;
-                let ireflection = spirv_reflect::Reflection::new_from_spirv_words(&iwords.words)
-                    .map_err(|err| span.to_error(err.to_string()))?;
-                (iwords, ireflection)
-            }
+            )
+        } else {
+            recompiled = true;
+            let iwords = self.compile(info)?;
+            let ireflection = spirv_reflect::Reflection::new_from_spirv_words(&iwords.words)
+                .map_err(|err| span.to_error(err.to_string()))?;
+            (iwords, ireflection)
         };
         if need_to_save_new_info || recompiled {
-            let inner_info = InnerInfo::from(
-                info.clone(),
-                time_changed.unwrap_or(0),
-                Some(Cow::Borrowed(&words)),
-            );
+            let inner_info =
+                InnerInfo::from(info, time_changed.unwrap_or(0), Some(Cow::Borrowed(&words)));
             // let res = ron::to_string(&inner_info);
             // let res = serde_json::to_string(&inner_info);
             match bincode::serialize(&inner_info) {
@@ -263,11 +251,11 @@ impl Compiler {
                     let x = std::fs::write(file_name, res);
 
                     if let Err(x) = x {
-                        span.emit_warning(format!("Could not save new info {:?}", x));
+                        span.emit_warning(format!("Could not save new info {x:?}"));
                     }
                 }
                 Err(x) => {
-                    span.emit_warning(format!("Could not save new info {:?}", x));
+                    span.emit_warning(format!("Could not save new info {x:?}"));
                 }
             }
         }
@@ -308,7 +296,7 @@ pub struct InnerInfo<'a> {
 }
 impl<'a> InnerInfo<'a> {
     fn from(
-        value: crate::ShaderInfo<'a>,
+        value: &crate::ShaderInfo<'a>,
         last_changed_time: u128,
         generated_binary: Option<Cow<'a, CompileArtifacts>>,
     ) -> Self {

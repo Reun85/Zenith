@@ -29,21 +29,21 @@ impl SpanMessages for proc_macro2::Span {
 }
 
 #[derive(Clone, Debug)]
-pub(crate) struct Sp<T> {
+pub struct Sp<T> {
     pub(crate) value: T,
     pub(crate) span: proc_macro2::Span,
 }
 impl<T> Sp<T> {
-    pub fn new(value: T, span: proc_macro2::Span) -> Self {
+    pub const fn new(value: T, span: proc_macro2::Span) -> Self {
         Self { value, span }
     }
     pub fn new_call_site(value: T) -> Self {
         Self::new(value, proc_macro2::Span::call_site())
     }
-    pub fn value(&self) -> &T {
+    pub const fn value(&self) -> &T {
         &self.value
     }
-    pub fn span(&self) -> &proc_macro2::Span {
+    pub const fn span(&self) -> &proc_macro2::Span {
         &self.span
     }
 }

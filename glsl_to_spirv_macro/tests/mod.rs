@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 extern crate glsl_to_spirv_macro;
 
 glsl_to_spirv_macro::shader! {

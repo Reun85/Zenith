@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use std::path::PathBuf;
 pub fn compile(path: PathBuf) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
     let mut resources = MacroResources::init()?;
@@ -46,7 +47,7 @@ impl MacroResources {
             let mut path = include_folder.clone();
             path.push(name);
             if !path.exists() {
-                return Err(format!("file does not exist {:?}", path).into());
+                return Err(format!("file does not exist {:?}", path));
             }
             let res = std::fs::read_to_string(path.clone()).map_err(|_| {
                 format!(
@@ -56,7 +57,7 @@ impl MacroResources {
             })?;
             Ok(shaderc::ResolvedInclude {
                 resolved_name: name.into(),
-                content: res.into(),
+                content: res,
             })
         });
         // additional_options.set_generate_debug_info();

@@ -19,7 +19,7 @@ use std::borrow::Cow;
 
 use crate::parse::{Input, InputType};
 use syn::{spanned::Spanned, Ident, LitStr};
-use utils::*;
+use utils::{CombinedError, Sp, SpanMessages};
 
 // #[derive(Debug, Clone)]
 // #[non_exhaustive]
@@ -39,8 +39,7 @@ enum ShaderSourceType {
 impl ShaderSourceType {
     fn span(&self) -> proc_macro2::Span {
         match self {
-            Self::Bytes(x) => x.span(),
-            Self::Path(x) => x.span(),
+            Self::Path(x) | Self::Bytes(x) => x.span(),
         }
     }
 }
@@ -90,9 +89,9 @@ fn shader_inner(input: Input) -> std::result::Result<proc_macro2::TokenStream, s
         .entry_point
         .unwrap_or_else(|| Ident::new("main", proc_macro2::Span::call_site()));
 
-    let compiled = {
+    let compiled_value = {
         let compiler = compiler::Compiler::init().map_err(|x| match x {
-            compiler::CompilerInitError::CompilerMissing => {
+            compiler::InitError::CompilerMissing => {
                 syn::Error::new(proc_macro2::Span::call_site(), x.to_string())
             }
         })?;
@@ -116,7 +115,7 @@ fn shader_inner(input: Input) -> std::result::Result<proc_macro2::TokenStream, s
 
             InputType::Multi(shaders) => {
                 let mut err = CombinedError::new();
-                let compiled = shaders
+                let compiled_values = shaders
                     .into_iter()
                     .map(|shader| ShaderInfo {
                         root: &root,
@@ -125,7 +124,7 @@ fn shader_inner(input: Input) -> std::result::Result<proc_macro2::TokenStream, s
                         ty: shader.ty,
                         entry_point: shader
                             .entry_point
-                            .map_or_else(|| Cow::Borrowed(&default_entry_point), |x| Cow::Owned(x)),
+                            .map_or_else(|| Cow::Borrowed(&default_entry_point), Cow::Owned),
                         spirv_version: Cow::Borrowed(&default_spirv_version),
                         vulkan_version: Cow::Borrowed(&default_vulkan_version),
                         generate_structure: shader.generate_structure.map_or_else(
@@ -148,15 +147,15 @@ fn shader_inner(input: Input) -> std::result::Result<proc_macro2::TokenStream, s
                     .into_iter();
                 err.finish()?;
 
-                compiled
+                compiled_values
             }
         }
     };
 
     // We have successfully compiled all the shaders at this point. Is storing all of them in a
     // vec resource intensive? Doubt.
-    let iter = compiled
-        .map(|(info, words, reflec)| tokengeneration::to_tokens(info, words.words(), reflec))
+    let iter = compiled_value
+        .map(|(info, words, reflec)| tokengeneration::to_tokens(info, words.words(), &reflec))
         .collect::<syn::Result<Vec<_>>>()?;
     let tokens = quote::quote!(#(#iter)*);
     Ok(tokens)
