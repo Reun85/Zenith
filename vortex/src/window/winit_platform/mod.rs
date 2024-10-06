@@ -6,9 +6,9 @@ use crate::window::input;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
-    #[error("Error creating window {0:?}")]
+    #[error(transparent)]
     EventLoopError(#[from] winit::error::EventLoopError),
-    #[error("{0}")]
+    #[error(transparent)]
     OsError(#[from] winit::error::OsError),
 }
 
