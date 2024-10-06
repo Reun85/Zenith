@@ -34,7 +34,6 @@ smart-default = { version = "0.7.1" }
 derive_more = { version = "1", features = ["full"] }
 rand = "0.8.5"
 smallvec = "1.13.2"
-cstr = "0.2.12"
 
 # serialization
 serde = { version = "1.0.210", features = ["serde_derive"] }

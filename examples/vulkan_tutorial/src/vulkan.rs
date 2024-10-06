@@ -615,7 +615,7 @@ pub struct VulkanLibrary {
 const VULKAN_API_VERSION: u32 = ash::vk::make_api_version(0, 1, 3, 250);
 const ENGINE_VERSION: u32 = ash::vk::make_api_version(0, 0, 0, 1);
 
-const ENGINE_NAME: &CStr = cstr::cstr!("");
+const ENGINE_NAME: &CStr = c"";
 #[derive(Debug, smart_default::SmartDefault)]
 pub struct InstanceCreateInfo<'a> {
     #[default = "Example"]
@@ -638,7 +638,7 @@ pub struct InstanceCreateInfo<'a> {
 pub struct Layer<'a>(&'a CStr);
 
 impl Layer<'_> {
-    pub const VALIDATIONLAYER: Layer<'static> = Layer(unsafe { c"VK_LAYER_KHRONOS_validation" });
+    pub const VALIDATIONLAYER: Layer<'static> = Layer(c"VK_LAYER_KHRONOS_validation");
 }
 
 #[derive(derive_more::Deref)]
@@ -997,7 +997,7 @@ impl Instance {
         }
         .unwrap();
 
-        const ENTRY_POINT: &CStr = cstr::cstr!("main");
+        const ENTRY_POINT: &CStr = c"main";
         let fragment_stage = ash::vk::PipelineShaderStageCreateInfo::builder()
             .stage(ash::vk::ShaderStageFlags::FRAGMENT)
             .module(fragment)
