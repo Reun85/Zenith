@@ -638,8 +638,7 @@ pub struct InstanceCreateInfo<'a> {
 pub struct Layer<'a>(&'a CStr);
 
 impl Layer<'_> {
-    pub const VALIDATIONLAYER: Layer<'static> =
-        Layer(unsafe { CStr::from_bytes_with_nul_unchecked(b"VK_LAYER_KHRONOS_validation\0") });
+    pub const VALIDATIONLAYER: Layer<'static> = Layer(unsafe { c"VK_LAYER_KHRONOS_validation" });
 }
 
 #[derive(derive_more::Deref)]
