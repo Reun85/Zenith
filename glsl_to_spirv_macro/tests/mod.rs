@@ -17,8 +17,8 @@ mod test {
     fn compiled2() {}
     #[test]
     fn compiled() {
-        let x = vert::load_words();
-        vert::Input {
+        let _x = vert::load_words();
+        let _y = vert::Input {
             normal: [1.0, 2.0, 3.0].into(),
             position: [1.0, 2.0, 3.0].into(),
             texcoord: [1.0, 2.0].into(),
