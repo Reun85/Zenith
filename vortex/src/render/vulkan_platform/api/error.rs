@@ -4,7 +4,7 @@ pub(crate) enum Generic {
     Vk(#[from] VkError),
     // These values are cloned
     #[error("Missing required extensions {0:?}")]
-    RequiredExtensionsMissing(Vec<super::ExtensionName>),
+    RequiredExtensionsMissing(Vec<super::types::ExtensionName>),
     #[error(transparent)]
     Library(#[from] ash::LoadingError),
     #[error("Failed to get window handle {0}")]
