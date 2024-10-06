@@ -1,8 +1,6 @@
 #[cfg(feature = "use-winit")]
 pub mod winit_platform;
 
-use winit::raw_window_handle::HasDisplayHandle;
-
 #[cfg(feature = "use-winit")]
 pub use crate::window::winit_platform as platform_impl;
 
@@ -298,7 +296,7 @@ pub struct WindowAttributes {
     pub inner_size: Option<PhysicalSize>,
     pub min_inner_size: Option<PhysicalSize>,
     pub max_inner_size: Option<PhysicalSize>,
-    pub position: Option<Position>,
+    pub position: Option<Position<f64>>,
     pub resizable: bool,
     pub enabled_buttons: WindowButtons,
     pub title: String,
@@ -374,19 +372,22 @@ impl From<nalgebra::Vector2<u32>> for PhysicalSize {
 }
 /// Offset on monitor in pixels
 #[derive(Debug, Clone, Copy)]
-pub struct Position {
-    x: u32,
-    y: u32,
+pub struct Position<T> {
+    x: T,
+    y: T,
 }
 
-impl From<Position> for nalgebra::Vector2<u32> {
-    fn from(val: Position) -> Self {
+impl<T: Copy> From<Position<T>> for nalgebra::Vector2<T> {
+    fn from(val: Position<T>) -> Self {
         nalgebra::Vector2::new(val.x, val.y)
     }
 }
 
-impl From<nalgebra::Vector2<u32>> for Position {
-    fn from(v: nalgebra::Vector2<u32>) -> Self {
+impl<T> From<nalgebra::Vector2<T>> for Position<T>
+where
+    T: Copy + std::fmt::Debug + std::cmp::PartialEq + 'static,
+{
+    fn from(v: nalgebra::Vector2<T>) -> Self {
         Position { x: v.x, y: v.y }
     }
 }

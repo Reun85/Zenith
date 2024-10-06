@@ -112,7 +112,7 @@ pub mod mouse {
     #[derive(Debug, derive_more::From)]
     pub struct Move {
         pub device_id: crate::window::DeviceID,
-        pub position: crate::window::Position,
+        pub position: crate::window::Position<f64>,
     }
     impl HasStaticCategory for Move {
         type Category = EventCategories;

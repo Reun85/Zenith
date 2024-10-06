@@ -16,6 +16,7 @@ pub mod event;
 pub mod infrastructure;
 pub mod layer;
 pub mod log;
+pub mod render;
 pub mod window;
 
 // If the result is an Err its fine to use box as this will definitely lead to a shutdown.

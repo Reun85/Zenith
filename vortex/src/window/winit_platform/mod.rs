@@ -157,6 +157,22 @@ impl winit::application::ApplicationHandler for WinitApplication {
                     x.on_window_event(&ev);
                 }
             }
+            WindowEvent::CursorMoved {
+                device_id,
+                position,
+            } => {
+                let device_id = DeviceID(device_id);
+                let ev = input::Event::Mouse(input::mouse::Event::MouseMove(input::mouse::Move {
+                    device_id: device_id.into(),
+                    position: super::Position {
+                        x: position.x,
+                        y: position.y,
+                    },
+                }));
+                if let Some(x) = self.input.app.as_mut() {
+                    x.on_window_event(&ev);
+                }
+            }
             WindowEvent::RedrawRequested => {
                 if let Some(x) = self.input.app.as_mut() {
                     x.render();
