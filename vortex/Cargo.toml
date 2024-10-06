@@ -3,6 +3,7 @@ name = "vortex"
 version = "0.1.0"
 author = "Reun85"
 repository = "https://github.com/Reun85/Zenith"
+edition = "2021"
 
 readme = "../README.md"
 
