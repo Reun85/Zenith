@@ -5,6 +5,7 @@ members = [
   "spirv_reflect",
   "vortex_macros",
   "examples/sandbox",
+  "examples/vulkan_tutorial",
 ]
 resolver = "2"
 license = "MIT"

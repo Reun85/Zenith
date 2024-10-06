@@ -11,6 +11,14 @@ bench = false
 doc = false
 
 
+[[example]]
+name = "vulkan_tutorial"
+path = "src/main.rs"
+test = false
+bench = false
+doc = false
+
+
 [dependencies]
 glsl_to_spirv_macro = { workspace = true }
 
