@@ -6,6 +6,8 @@ members = [
   "vortex_macros",
   "examples/sandbox",
   "examples/vulkan_tutorial",
+  "infrastructure",
+  "rendering_backend/vulkan",
 ]
 resolver = "2"
 license = "MIT"
@@ -36,6 +38,14 @@ path = "glsl_to_spirv_macro"
 [workspace.dependencies.vortex_macros]
 version = "0.1"
 path = "vortex_macros"
+
+
+[workspace.dependencies.infrastructure]
+version = "0.1"
+path = "infrastructure"
+[workspace.dependencies.vulkan]
+version = "0.1"
+path = "rendering_backend/vulkan"
 # -----------------------------------------------
 
 [workspace.dependencies]

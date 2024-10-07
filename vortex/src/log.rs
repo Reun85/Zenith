@@ -48,11 +48,32 @@ pub enum Error {
     SetGlobalDefault(tracing::subscriber::SetGlobalDefaultError),
 }
 
+#[must_use]
+pub const fn get_logger_level_based_on_build_type() -> tracing::Level {
+    #[cfg(build_type = "dist")]
+    {
+        tracing::Level::WARN
+    }
+
+    #[cfg(build_type = "release")]
+    {
+        tracing::Level::DEBUG
+    }
+
+    #[cfg(build_type = "debug")]
+    {
+        tracing::Level::TRACE
+    }
+    #[cfg(not(any(build_type = "debug", build_type = "release", build_type = "dist")))]
+    {
+        tracing::Level::ERROR
+    }
+}
 /// # Errors
 /// Returns whether the initializion failed
 pub fn init_logging() -> Result<(), Error> {
     create(LoggingCreateInfo {
-        level: crate::build_constants::get_logger_level(),
+        level: get_logger_level_based_on_build_type(),
         ..LoggingCreateInfo::max()
     })?;
     info!("Logging initialized");

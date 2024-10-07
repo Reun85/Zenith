@@ -1,5 +1,5 @@
 #[derive(Debug, thiserror::Error)]
-pub(crate) enum Generic {
+pub enum Generic {
     #[error(transparent)]
     Vk(#[from] VkError),
     // These values are cloned

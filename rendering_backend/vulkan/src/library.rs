@@ -39,19 +39,22 @@ pub struct SwapChainSupport {
 
 impl VulkanLibrary {
     pub fn new() -> Result<Self, error::Generic> {
-        crate::log::debug!("Creating VulkanLibrary");
+        tracing::debug!("Creating VulkanLibrary");
         let entry = ash::Entry::linked();
         Ok(Self { entry })
     }
 
-    pub fn create_surface(
+    pub fn create_surface<T>(
         &self,
         instance: &super::instance::Instance,
-        window: &crate::window::Window,
-    ) -> Result<Surface, error::Generic> {
-        crate::log::debug!("Creating surface");
-        let display_handle = raw_window_handle::HasDisplayHandle::display_handle(&window)?;
-        let window_handle = raw_window_handle::HasWindowHandle::window_handle(&window)?;
+        handle: &T,
+    ) -> Result<Surface, error::Generic>
+    where
+        T: raw_window_handle::HasDisplayHandle + raw_window_handle::HasWindowHandle,
+    {
+        tracing::debug!("Creating surface");
+        let display_handle = raw_window_handle::HasDisplayHandle::display_handle(&handle)?;
+        let window_handle = raw_window_handle::HasWindowHandle::window_handle(&handle)?;
         let surface = unsafe {
             // platform independent
             ash_window::create_surface(
@@ -72,7 +75,7 @@ impl VulkanLibrary {
     pub fn get_surface_required_extensions(
         handle: impl raw_window_handle::HasDisplayHandle,
     ) -> Result<Vec<ExtensionName>, error::Generic> {
-        crate::log::debug!("Getting surface required extensions");
+        tracing::debug!("Getting surface required extensions");
         let display_handle = raw_window_handle::HasDisplayHandle::display_handle(&handle)?;
         let surface_extensions =
             ash_window::enumerate_required_extensions(*display_handle.as_ref())
@@ -88,7 +91,7 @@ impl VulkanLibrary {
         &self,
         required_extensions: Vec<ExtensionName>,
     ) -> Result<super::instance::Instance, error::Generic> {
-        crate::log::debug!("Collecting Vulkan instance info for ");
+        tracing::debug!("Collecting Vulkan instance info for ");
         let required_extensions = {
             let mut res = required_extensions;
             if cfg!(any(target_os = "macos", target_os = "ios")) {
@@ -98,7 +101,7 @@ impl VulkanLibrary {
             }
             res
         };
-        crate::log::trace!("Required extensions {required_extensions:?}");
+        tracing::trace!("Required extensions {required_extensions:?}");
         let optional_extensions = vec![ash::ext::debug_utils::NAME]
             .into_iter()
             .map(|x| x.into())
@@ -109,14 +112,14 @@ impl VulkanLibrary {
             .into_iter()
             .chain(optional_extensions)
             .collect::<Vec<_>>();
-        crate::log::debug!("Optional extensions {:?}", enabled_extensions);
+        tracing::debug!("Optional extensions {:?}", enabled_extensions);
         let layers = if cfg!(not(build_type = "dist")) {
             vec![Layer::VALIDATIONLAYER]
         } else {
             vec![]
         };
         let validation_layers = self.filter_available_validation_layers(layers)?;
-        crate::log::debug!("Validation layers {:?}", validation_layers);
+        tracing::debug!("Validation layers {:?}", validation_layers);
         let info = InstanceCreateInfo {
             application_name: "Example",
             enabled_layers: validation_layers,
@@ -135,8 +138,8 @@ impl VulkanLibrary {
         &self,
         info: InstanceCreateInfo,
     ) -> Result<super::instance::Instance, error::Generic> {
-        let _s = crate::log::debug_span!("Instance creation");
-        crate::log::trace!("Instance creation info {:?}", info);
+        let _s = tracing::debug_span!("Instance creation");
+        tracing::trace!("Instance creation info {:?}", info);
         let app_name = raw::string_to_cstring_remove_nuls(info.application_name);
         let app_info = ash::vk::ApplicationInfo::default()
             .application_name(&app_name)
@@ -256,7 +259,7 @@ impl VulkanLibrary {
             .filter(|layer| {
                 let x = layers.iter().any(|layer2| layer2.name == *layer);
                 if !x {
-                    crate::log::warn!("Validation layer {:?} is not available", layer);
+                    tracing::warn!("Validation layer {:?} is not available", layer);
                 }
                 x
             })
@@ -279,7 +282,7 @@ impl VulkanLibrary {
                     | ash::vk::DebugUtilsMessageSeverityFlagsEXT::INFO
             }
         };
-        crate::log::info!("Vulkan message callback severity set to: {:?}", val);
+        tracing::info!("Vulkan message callback severity set to: {:?}", val);
         val
     }
     fn message_type() -> ash::vk::DebugUtilsMessageTypeFlagsEXT {
@@ -302,7 +305,7 @@ impl VulkanLibrary {
                     | ash::vk::DebugUtilsMessageTypeFlagsEXT::PERFORMANCE
             }
         };
-        crate::log::info!("Vulkan message callback types set to: {:?}", val);
+        tracing::info!("Vulkan message callback types set to: {:?}", val);
         val
     }
 
@@ -357,16 +360,16 @@ unsafe extern "system" fn vulkan_debug_callback(
     // let msg = format!("{}: [{}] ({:?})", message_id_name, message, objects);
     match message_severity {
         ash::vk::DebugUtilsMessageSeverityFlagsEXT::ERROR => {
-            crate::log::error!(msg)
+            tracing::error!(msg)
         }
         ash::vk::DebugUtilsMessageSeverityFlagsEXT::WARNING => {
-            crate::log::warn!(msg)
+            tracing::warn!(msg)
         }
         ash::vk::DebugUtilsMessageSeverityFlagsEXT::INFO => {
-            crate::log::info!(msg)
+            tracing::info!(msg)
         }
         ash::vk::DebugUtilsMessageSeverityFlagsEXT::VERBOSE => {
-            crate::log::debug!(msg)
+            tracing::debug!(msg)
         }
         _ => {}
     }

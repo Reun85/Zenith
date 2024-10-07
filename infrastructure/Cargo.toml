@@ -1,0 +1,22 @@
+[package]
+name = "infrastructure"
+version = "0.1.0"
+edition = "2021"
+
+build = "../build.rs"
+
+[dependencies]
+
+smart-default = { workspace = true }
+thiserror = { workspace = true }
+derive_more = { workspace = true }
+bitflags = { workspace = true }
+smallvec = { workspace = true }
+tracing = { workspace = true }
+
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = [
+  'cfg(build_type, values("debug","release","dist"))',
+  'cfg(debug)',
+] }

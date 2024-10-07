@@ -4,16 +4,18 @@ version = "0.1.0"
 author = "Reun85"
 repository = "https://github.com/Reun85/Zenith"
 edition = "2021"
-
 readme = "../README.md"
 
-build = "build.rs"
+build = "../build.rs"
+
 
 [features]
 default = ["use-winit", "use-vulkan"]
-#Window Handler
+
+# rendering backend
+use-vulkan = ["dep:vulkan"]
+# Window Handler
 use-winit = ["dep:winit"]
-use-vulkan = ["dep:ash", "dep:ash-window"]
 # Potentially 
 #sdl = []
 #glfw = []
@@ -29,24 +31,24 @@ use-vulkan = ["dep:ash", "dep:ash-window"]
 
 
 smart-default = { workspace = true }
-tracing = { workspace = true }
-tracing-subscriber = { workspace = true }
 thiserror = { workspace = true }
 derive_more = { workspace = true }
 nalgebra = { workspace = true }
 bitflags = { workspace = true }
 smallvec = { workspace = true }
 raw-window-handle = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
 
 vortex_macros = { workspace = true }
+infrastructure = { workspace = true }
 
 
 # feature = winit
 winit = { workspace = true, optional = true }
 
-# feature = vulkan
-ash = { workspace = true, optional = true }
-ash-window = { workspace = true, optional = true }
+# feature vulkan
+vulkan = { workspace = true, optional = true }
 
 
 [lints.rust]

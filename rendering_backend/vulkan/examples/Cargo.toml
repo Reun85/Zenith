@@ -1,0 +1,45 @@
+
+[[example]]
+name = "triangle"
+path = "triangle.rs"
+test = false
+bench = false
+doc = false
+
+
+[dependencies]
+glsl_to_spirv_macro = { workspace = true }
+
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+# error handling
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+
+# utilities
+smart-default = { workspace = true }
+derive_more = { workspace = true }
+rand = "0.8.5"
+smallvec = { workspace = true }
+
+# serialization
+bincode = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+
+# vulkan 
+#
+
+# images 
+png = { workspace = true }
+image = { workspace = true }
+
+# math 
+nalgebra = { workspace = true }
+
+# windows
+# Using a later version brakes raw handles
+raw-window-handle = { workspace = true }
+winit = { workspace = true }

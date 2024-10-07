@@ -22,7 +22,7 @@ bitflags::bitflags! {
         const InputAndMouse = Self::Input.bits() | Self::Mouse.bits();
     }
 }
-impl crate::infrastructure::StateConstains for EventCategories {
+impl infrastructure::StateConstains for EventCategories {
     fn contains(&self, other: &Self) -> bool {
         self.contains(*other)
     }

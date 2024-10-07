@@ -6,7 +6,7 @@ pub struct LayerId {
 
 trait Layer
 where
-    Self: crate::infrastructure::VortexDebug,
+    Self: infrastructure::VortexDebug,
 {
     fn set_id(&mut self, id: LayerId);
     fn get_id(&self) -> LayerId;

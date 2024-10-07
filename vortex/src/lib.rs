@@ -7,13 +7,10 @@
 use event::EventLike;
 use window::EventLoopLike;
 
-extern crate tracing;
-extern crate tracing_subscriber;
 extern crate winit;
 
 pub mod build_constants;
 pub mod event;
-pub mod infrastructure;
 pub mod layer;
 pub mod log;
 pub mod render;
@@ -22,7 +19,7 @@ pub mod window;
 // If the result is an Err its fine to use box as this will definitely lead to a shutdown.
 pub trait UserApplication
 where
-    Self: crate::infrastructure::VortexDebug,
+    Self: infrastructure::VortexDebug,
 {
     /// Run per game update
     /// Currently unused
@@ -62,7 +59,7 @@ pub fn start<AppBuilder: UserApplicationBuilder>() -> Result<window::Output, Err
 where
     <AppBuilder as UserApplicationBuilder>::Output: 'static,
 {
-    log::init_logging()?;
+    crate::log::init_logging()?;
 
     {
         let window_context = <window::EventLoop as window::EventLoopLike>::build();

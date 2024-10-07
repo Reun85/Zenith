@@ -1,3 +1,9 @@
+#![feature(negative_impls)]
+// Start of code
+#![deny(clippy::correctness, clippy::complexity, clippy::all)]
+#![warn(clippy::perf, clippy::suspicious, clippy::style)]
+
+pub mod unsafe_ref;
 /// Default constraints for types
 // Will include the Zenith specific viewer later
 pub trait VortexDebug
@@ -77,5 +83,3 @@ impl PhantomUnDrop {
 }
 #[allow(non_upper_case_globals)]
 pub const PhantomUnDrop: PhantomUnDrop = PhantomUnDrop { helper: Helper };
-
-pub mod unsafe_ref;
