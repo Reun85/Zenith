@@ -4,20 +4,13 @@ members = [
   "glsl_to_spirv_macro",
   "spirv_reflect",
   "vortex_macros",
-  "examples/sandbox",
   "examples/vulkan_tutorial",
   "infrastructure",
   "rendering_backend/vulkan",
+  "rendering_backend/vulkan/examples",
+
 ]
 resolver = "2"
-license = "MIT"
-edition = "2021"
-
-
-# Globally set
-[toolchain]
-channel = "nightly"
-
 
 # projects
 # -----------------------------------------------

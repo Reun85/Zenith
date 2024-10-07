@@ -1,11 +1,14 @@
+[package]
+name = "example_project"
+version = "0.1.0"
+edition = "2021"
 
 [[example]]
 name = "triangle"
-path = "triangle.rs"
+path = "src/triangle.rs"
 test = false
 bench = false
 doc = false
-
 
 [dependencies]
 glsl_to_spirv_macro = { workspace = true }

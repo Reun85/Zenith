@@ -2,12 +2,14 @@
 name = "vulkan"
 version = "0.1.0"
 edition = "2021"
-author = "Reun85"
+authors = ["Reun85"]
 repository = "https://github.com/Reun85/Zenith"
 readme = "../README.md"
 publish = true
-
 build = "../../build.rs"
+
+[lib]
+crate-type = ["lib"]
 
 [dependencies]
 ash = { workspace = true }

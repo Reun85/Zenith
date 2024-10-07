@@ -1,19 +1,14 @@
 [package]
 name = "glsl_to_spirv_macro"
 version = "0.1.0"
-author = "Reun85"
+authors = ["Reun85"]
 edition = "2021"
 publish = true
-doc = true
-test = true
-proc-macro-diagnostics = true
 
 [lib]
 proc-macro = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-[toolchain]
-channel = "nightly"
 [features]
 default = []
 generate_debug_info = []

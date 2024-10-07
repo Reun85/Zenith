@@ -1,11 +1,9 @@
 [package]
 name = "spirv_reflect"
 version = "0.1.0"
-author = "Reun85"
+authors = ["Reun85"]
 edition = "2021"
 publish = true
-doc = true
-test = true
 
 [dev-dependencies]
 nalgebra = { workspace = true }
@@ -13,11 +11,8 @@ shaderc = { workspace = true }
 ash = { workspace = true }
 
 [[example]]
-name = "mod"
+name = "spirv_reflect"
 path = "example/mod.rs"
-
-[toolchain]
-channel = "nightly"
 
 [lib]
 crate-type = ["lib"]
