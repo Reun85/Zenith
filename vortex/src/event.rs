@@ -17,6 +17,16 @@ where
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+/// A default category type. All events will be dispatched to all listeners.
+pub struct NoCategory {}
+
+impl EventCategory for NoCategory {
+    fn contains(&self, _: &Self) -> bool {
+        true
+    }
+}
+
 /// Marker Trait for data types that may be dispatched using  `EventDispatcher`
 #[allow(clippy::module_name_repetitions)]
 pub trait EventLike
