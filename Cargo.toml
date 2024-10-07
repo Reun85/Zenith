@@ -4,8 +4,9 @@ members = [
   "glsl_to_spirv_macro",
   "spirv_reflect",
   "vortex_macros",
-  "examples/vulkan_tutorial",
   "infrastructure",
+  "examples/sandbox",
+  "examples/vulkan_tutorial",
   "rendering_backend/vulkan",
   "rendering_backend/vulkan/examples",
 

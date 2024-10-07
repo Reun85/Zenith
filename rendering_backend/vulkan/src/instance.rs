@@ -8,3 +8,30 @@ pub struct Instance {
     // _debug_utils: ash::extensions::ext::DebugUtils,
     // _debug_messenger: ash::vk::DebugUtilsMessengerEXT,
 }
+
+impl Drop for Instance {
+    fn drop(&mut self) {
+        tracing::debug!("Dropping instance");
+        unsafe {
+            self._debug_utils.destroy_debug_utils_messenger(
+                self._debug_messenger,
+                self.allocation_callbacks.as_ref(),
+            );
+        };
+
+        unsafe {
+            self.raw
+                .destroy_instance(self.allocation_callbacks.as_ref());
+        };
+    }
+}
+
+impl infrastructure::ResourceDeleter<crate::library::Surface> for Instance {
+    fn delete(&mut self, resource: &crate::library::Surface) {
+        unsafe {
+            resource
+                .surface_loader
+                .destroy_surface(resource.raw, self.allocation_callbacks.as_ref())
+        }
+    }
+}

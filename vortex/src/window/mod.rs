@@ -6,11 +6,11 @@ pub use crate::window::winit_platform as platform_impl;
 
 pub mod input;
 
-pub type AppInitializerFunction =
-    dyn Fn(&mut InitContext) -> Result<Box<dyn super::UserApplication>, crate::Error> + 'static;
+pub type AppInitializerFunction = dyn Fn(&mut InitContext) -> Result<Box<dyn crate::entry::UserApplication>, crate::entry::Error>
+    + 'static;
 // TODO: Give this a better name
 pub(crate) struct EventLoopInput {
-    pub(crate) app: Option<Box<dyn super::UserApplication>>,
+    pub(crate) app: Option<Box<dyn crate::entry::UserApplication>>,
     pub(crate) app_creater: Box<AppInitializerFunction>,
 }
 

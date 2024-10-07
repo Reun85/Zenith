@@ -6,18 +6,8 @@
 pub mod unsafe_ref;
 /// Default constraints for types
 // Will include the Zenith specific viewer later
-pub trait VortexDebug
-where
-    Self: std::fmt::Debug,
-{
-}
 
-impl<T> VortexDebug for T where T: std::fmt::Debug {}
-
-pub trait Flags
-where
-    Self: VortexDebug,
-{
+pub trait Flags {
     /// Should be used for single flag
     fn has_flags(&self, flags: &Self) -> bool;
     /// Should be used for single flag

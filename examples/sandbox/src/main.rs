@@ -8,9 +8,9 @@
 )]
 use std::num::NonZeroU32;
 use std::rc::Rc;
+use vortex::entry::UserApplication;
 use vortex::log;
 use vortex::window::{InitContextLike, WindowHandler};
-use vortex::UserApplication;
 
 struct App {
     window: Rc<vortex::window::Window>,
@@ -66,9 +66,11 @@ impl UserApplication for App {
     fn on_exit(&mut self) {}
 }
 
-impl vortex::UserApplicationBuilder for App {
+impl vortex::entry::UserApplicationBuilder for App {
     type Output = Self;
-    fn new(context: &mut vortex::window::InitContext) -> Result<Self::Output, vortex::Error> {
+    fn new(
+        context: &mut vortex::window::InitContext,
+    ) -> Result<Self::Output, vortex::entry::Error> {
         let window = Rc::new(context.create_window(vortex::window::WindowAttributes::default())?);
 
         let context = softbuffer::Context::new(window.clone()).unwrap();
@@ -82,7 +84,7 @@ impl vortex::UserApplicationBuilder for App {
 }
 
 fn main() -> anyhow::Result<()> {
-    match vortex::start::<App>() {
+    match vortex::entry::start::<App>() {
         Ok(it) => it,
         Err(err) => return Err(err)?,
     };

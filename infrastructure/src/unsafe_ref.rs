@@ -13,7 +13,7 @@ type UnsafeRefInner<T> = std::cell::UnsafeCell<T>;
 /// [`RefCell`](`std::cell::RefCell`) to catch borrow errors in debug builds.
 /// In distribution builds, the runtime borrow checker is removed by being a simple wrapper over
 /// [`UnsafeCell`](`std::cell::UnsafeCell`).
-pub(crate) struct UnsafeCell<T: ?Sized> {
+pub struct UnsafeCell<T: ?Sized> {
     pub(crate) inner: UnsafeCellInner<T>,
 }
 
@@ -22,7 +22,7 @@ type UnsafeRefInner<'a, T> = std::cell::Ref<'a, T>;
 
 #[cfg(not(debug))]
 type UnsafeRefInner<'a, T> = &'a T;
-pub(crate) struct UnsafeRef<'a, T: ?Sized> {
+pub struct UnsafeRef<'a, T: ?Sized> {
     inner: UnsafeRefInner<'a, T>,
 }
 impl<'a, T> std::ops::Deref for UnsafeRef<'a, T> {
@@ -45,7 +45,8 @@ type UnsafeRefMutInner<'a, T> = std::cell::RefMut<'a, T>;
 
 #[cfg(not(debug))]
 type UnsafeRefMutInner<'a, T> = &'a mut T;
-pub(crate) struct UnsafeRefMut<'a, T: ?Sized> {
+
+pub struct UnsafeRefMut<'a, T: ?Sized> {
     inner: UnsafeRefMutInner<'a, T>,
 }
 

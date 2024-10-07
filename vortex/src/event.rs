@@ -3,14 +3,14 @@
 #[allow(clippy::module_name_repetitions)]
 pub trait EventCategory
 where
-    Self: infrastructure::VortexDebug + Clone + std::hash::Hash,
+    Self: crate::debug::Debug + Clone + std::hash::Hash,
 {
     fn contains(&self, other: &Self) -> bool;
 }
 
 impl<T> EventCategory for T
 where
-    T: Clone + std::hash::Hash + infrastructure::StateConstains + infrastructure::VortexDebug,
+    T: Clone + std::hash::Hash + infrastructure::StateConstains + crate::debug::Debug,
 {
     fn contains(&self, other: &Self) -> bool {
         infrastructure::StateConstains::contains(self, other)
@@ -31,7 +31,7 @@ impl EventCategory for NoCategory {
 #[allow(clippy::module_name_repetitions)]
 pub trait EventLike
 where
-    Self: infrastructure::VortexDebug,
+    Self: crate::debug::Debug,
 {
     /// The `EventCategory` this Event belongs to
     /// set to () if you don't wish to use `EventCategory`-s

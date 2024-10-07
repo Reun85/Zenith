@@ -7,12 +7,19 @@ pub struct VulkanLibrary {
     pub entry: ash::Entry,
 }
 
+impl Drop for VulkanLibrary {
+    fn drop(&mut self) {
+        tracing::debug!("Dropping VulkanLibrary");
+    }
+}
+
 pub struct DebugCallBackData {}
 
 #[derive(derive_more::Deref)]
 pub struct Surface {
     #[deref]
-    pub surface: ash::vk::SurfaceKHR,
+    pub raw: ash::vk::SurfaceKHR,
+    pub surface_loader: ash::khr::surface::Instance,
 }
 #[derive(Debug, smart_default::SmartDefault)]
 pub struct InstanceCreateInfo<'a> {
@@ -67,8 +74,8 @@ impl VulkanLibrary {
             .map_err(Into::<error::VkError>::into)?
         };
         Ok(Surface {
-            surface,
-            //surface_loader: ash::khr::Surface::new(&self.entry, &instance.inner),
+            raw: surface,
+            surface_loader: ash::khr::surface::Instance::new(&self.entry, &instance.raw),
         })
     }
 
