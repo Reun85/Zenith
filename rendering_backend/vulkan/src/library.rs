@@ -21,20 +21,28 @@ pub struct Surface {
     pub raw: ash::vk::SurfaceKHR,
     pub surface_loader: ash::khr::surface::Instance,
 }
-#[derive(Debug, smart_default::SmartDefault)]
+#[derive(Debug)]
 pub struct InstanceCreateInfo<'a> {
-    #[default = "Example"]
     pub application_name: &'a str,
-    #[default(vec![])]
     pub enabled_extensions: Vec<ExtensionName>,
-    #[default({
-        if cfg!(any(target_os = "macos", target_os = "ios")) { ash::vk::InstanceCreateFlags::ENUMERATE_PORTABILITY_KHR } else {
-            ash::vk::InstanceCreateFlags::default()
-        }
-    })]
     pub flags: ash::vk::InstanceCreateFlags,
-    #[default(vec![])]
     pub enabled_layers: Vec<ExtensionName>,
+}
+
+impl Default for InstanceCreateInfo<'static> {
+    fn default() -> Self {
+        let flags = if cfg!(any(target_os = "macos", target_os = "ios")) {
+            ash::vk::InstanceCreateFlags::ENUMERATE_PORTABILITY_KHR
+        } else {
+            ash::vk::InstanceCreateFlags::default()
+        };
+        Self {
+            application_name: "Example",
+            enabled_extensions: vec![],
+            enabled_layers: vec![],
+            flags,
+        }
+    }
 }
 
 pub struct SwapChainSupport {
@@ -128,7 +136,6 @@ impl VulkanLibrary {
         let validation_layers = self.filter_available_validation_layers(layers)?;
         tracing::debug!("Validation layers {:?}", validation_layers);
         let info = InstanceCreateInfo {
-            application_name: "Example",
             enabled_layers: validation_layers,
             enabled_extensions,
             ..Default::default()
