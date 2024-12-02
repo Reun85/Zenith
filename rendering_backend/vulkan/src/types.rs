@@ -16,6 +16,7 @@ impl ExtensionName {
         Self(from_cstr_to_array(cstr))
     }
 }
+
 impl From<&CStr> for ExtensionName {
     fn from(value: &CStr) -> Self {
         Self(from_cstr_to_array(value))

@@ -1,12 +1,12 @@
+//! Allows for interior mutability without runtime checks.
+//! It is only intended to be used in situations where the borrow checking rules can be guaranteed
+//! by the user.
 #![allow(dead_code)]
 
 #[cfg(debug)]
 type UnsafeCellInner<T> = std::cell::RefCell<T>;
 #[cfg(not(debug))]
 type UnsafeRefInner<T> = std::cell::UnsafeCell<T>;
-/// Allows for interior mutability without runtime checks.
-/// It is only intended to be used in situations where the borrow checking rules can be guaranteed
-/// by the user.
 /// Misuse of this struct can lead to undefined behaviour
 /// # Safety
 /// For safety reason in debug builds, this struct is a wrapper around
@@ -25,7 +25,7 @@ type UnsafeRefInner<'a, T> = &'a T;
 pub struct UnsafeRef<'a, T: ?Sized> {
     inner: UnsafeRefInner<'a, T>,
 }
-impl<'a, T> std::ops::Deref for UnsafeRef<'a, T> {
+impl<T> std::ops::Deref for UnsafeRef<'_, T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
@@ -50,7 +50,7 @@ pub struct UnsafeRefMut<'a, T: ?Sized> {
     inner: UnsafeRefMutInner<'a, T>,
 }
 
-impl<'a, T> std::ops::Deref for UnsafeRefMut<'a, T> {
+impl<T> std::ops::Deref for UnsafeRefMut<'_, T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
@@ -65,7 +65,7 @@ impl<'a, T> std::ops::Deref for UnsafeRefMut<'a, T> {
     }
 }
 
-impl<'a, T> std::ops::DerefMut for UnsafeRefMut<'a, T> {
+impl<T> std::ops::DerefMut for UnsafeRefMut<'_, T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         #[cfg(not(debug))]
         {

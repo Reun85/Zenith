@@ -1,11 +1,40 @@
 mod winit_app;
 
-pub struct App {}
+pub struct VulkanData {
+    entry: vulkan::library::VulkanLibrary,
+    lib: vulkan::instance::Instance,
+    surface: vulkan::surface::Surface,
+}
+
+impl VulkanData {
+    fn new(window: &winit::window::Window) -> Self {
+        let entry = vulkan::library::VulkanLibrary::new().unwrap();
+        let lib = entry
+            .create_instance(vulkan::library::InstanceCreateInfo {
+                application_name: "Test",
+                ..Default::default()
+            })
+            .unwrap();
+        let surface = entry.create_surface(&lib, &window).unwrap();
+        Self {
+            entry,
+            lib,
+            surface,
+        }
+    }
+}
+
+pub struct App {
+    vulkan_data: VulkanData,
+}
 
 impl winit_app::Application for App {
     fn init(info: winit_app::InitInfo) -> Self {
-        let winit_app::InitInfo { window: _window } = info;
-        App {}
+        let winit_app::InitInfo { window } = info;
+
+        App {
+            vulkan_data: VulkanData::new(window),
+        }
     }
 
     fn render(&mut self, info: winit_app::RenderInfo) {

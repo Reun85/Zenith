@@ -130,9 +130,7 @@ impl Compiler {
         Ok(CompileArtifacts { words, includes })
     }
     fn local_to_manifest(root: &std::path::Path, path: &std::path::PathBuf) -> std::path::PathBuf {
-        let manifest_dir = if let Ok(x) = std::env::var("CARGO_RUSTC_CURRENT_DIR") {
-            x
-        } else {
+        let Ok(manifest_dir) = std::env::var("CARGO_RUSTC_CURRENT_DIR") else {
             return path.clone();
         };
         let manifest_dir = std::path::PathBuf::from(manifest_dir);
@@ -310,7 +308,7 @@ impl<'a> InnerInfo<'a> {
         }
     }
 }
-impl<'a> crate::ShaderInfo<'a> {
+impl crate::ShaderInfo<'_> {
     pub fn need_to_recompile(&self, previous: &Option<InnerInfo>) -> bool {
         let previous = match previous {
             None => return true,
