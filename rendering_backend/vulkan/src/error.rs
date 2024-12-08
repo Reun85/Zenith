@@ -14,6 +14,8 @@ pub enum Error {
     Library(#[from] ash::LoadingError),
     #[error("Failed to get window handle {0}")]
     HandleError(#[from] raw_window_handle::HandleError),
+    #[error("Queue description could not be fit: {0:?}")]
+    QueueDescriptionCouldNotBeFilled(super::device::QueueDescription),
 }
 
 impl From<ash::vk::Result> for Error {

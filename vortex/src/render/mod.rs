@@ -1,8 +1,6 @@
 //! This module contains all the rendering logic for the engine.
 
-#[cfg(feature = "use-vulkan")]
 mod vulkan_platform;
-#[cfg(feature = "use-vulkan")]
 use crate::render::vulkan_platform as platform_impl;
 
 /// The usable context for the rendering engine

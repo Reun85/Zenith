@@ -10,10 +10,8 @@ build = "../build.rs"
 
 
 [features]
-default = ["use-winit", "use-vulkan"]
+default = ["use-winit"]
 
-# rendering backend
-use-vulkan = ["dep:vulkan"]
 # Window Handler
 use-winit = ["dep:winit"]
 # Potentially 
@@ -48,7 +46,7 @@ infrastructure = { workspace = true }
 winit = { workspace = true, optional = true }
 
 # feature vulkan
-vulkan = { workspace = true, optional = true }
+horizon = { workspace = true, optional = true }
 
 
 [lints.rust]

@@ -12,3 +12,7 @@ pub mod memory;
 pub mod raw;
 pub mod surface;
 pub mod types;
+
+pub use device::*;
+pub use instance::*;
+pub use surface::*;

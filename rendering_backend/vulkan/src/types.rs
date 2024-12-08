@@ -1,3 +1,4 @@
+/// Own wrapper library around common types in ash
 use super::raw::*;
 use std::ffi::CStr;
 #[derive(
@@ -9,11 +10,14 @@ use std::ffi::CStr;
     PartialEq,
     Clone,
 )]
-pub struct ExtensionName(pub(super) [i8; ExtensionName::MAX_SIZE]);
+pub struct ExtensionName([i8; ExtensionName::MAX_SIZE]);
 impl ExtensionName {
     pub const MAX_SIZE: usize = ash::vk::MAX_EXTENSION_NAME_SIZE;
     pub const fn from_cstr(cstr: &CStr) -> Self {
         Self(from_cstr_to_array(cstr))
+    }
+    pub const fn to_str(&self) -> &CStr {
+        unsafe { CStr::from_ptr(&self.0[0]) }
     }
 }
 
@@ -76,7 +80,7 @@ impl From<ash::vk::LayerProperties> for Layer {
     }
 }
 
-#[derive(Debug, derive_more::From, derive_more::Into, PartialEq)]
+#[derive(Debug, Clone, derive_more::From, derive_more::Into, PartialEq)]
 pub struct ExtensionProperties {
     pub name: ExtensionName,
     pub spec_version: u32,
@@ -90,7 +94,6 @@ impl From<ash::vk::ExtensionProperties> for ExtensionProperties {
         }
     }
 }
-
 // Due to the many linking chains, this type simply outputs the handle when printed using Debug.
 #[derive(
     derive_more::From,

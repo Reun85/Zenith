@@ -1,5 +1,5 @@
 [package]
-name = "vulkan"
+name = "horizon"
 version = "0.1.0"
 edition = "2021"
 authors = ["Reun85"]

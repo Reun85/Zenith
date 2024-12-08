@@ -1,4 +1,3 @@
-use crate::event;
 use crate::event::EventLike;
 use crate::window;
 use crate::window::EventLoopLike;

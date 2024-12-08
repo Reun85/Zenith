@@ -13,6 +13,7 @@ members = [
 ]
 resolver = "2"
 
+
 # projects
 # -----------------------------------------------
 
@@ -37,9 +38,11 @@ path = "vortex_macros"
 [workspace.dependencies.infrastructure]
 version = "0.1"
 path = "infrastructure"
-[workspace.dependencies.vulkan]
+[workspace.dependencies.horizon]
 version = "0.1"
 path = "rendering_backend/vulkan"
+
+
 # -----------------------------------------------
 
 [workspace.dependencies]
@@ -48,7 +51,7 @@ tracing = "0.1.40"
 tracing-subscriber = "0.3.18"
 
 # error handling
-thiserror = { version = "1.0.64" }
+thiserror = { version = "2.0.4" }
 anyhow = { version = "1.0" }
 
 # utilities

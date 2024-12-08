@@ -38,7 +38,7 @@ pub trait InitContextLike {
 #[derive(Debug)]
 pub struct InitContext<'a>(platform_impl::InitContext<'a>);
 
-impl<'a> InitContextLike for InitContext<'a> {
+impl InitContextLike for InitContext<'_> {
     fn create_window(&mut self, attributes: WindowAttributes) -> Result<Window, Error> {
         self.0.create_window(attributes)
     }

@@ -34,7 +34,7 @@ serde_json = { workspace = true }
 
 # vulkan 
 
-vulkan = { workspace = true }
+horizon = { workspace = true }
 
 # images 
 png = { workspace = true }

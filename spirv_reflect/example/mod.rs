@@ -36,7 +36,7 @@ use spirv_reflect::DebugNames;
 
 struct LessVerboseInstr<'a, 'b>(&'a Instruction, Option<&'a DebugNames<'b>>);
 
-impl<'a, 'b> std::fmt::Debug for LessVerboseInstr<'a, 'b> {
+impl std::fmt::Debug for LessVerboseInstr<'_, '_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self.1 {
             None => write!(

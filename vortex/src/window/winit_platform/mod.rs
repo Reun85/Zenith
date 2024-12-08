@@ -206,7 +206,7 @@ pub struct InitContext<'a> {
     event_loop: &'a winit::event_loop::ActiveEventLoop,
 }
 
-impl<'a> super::InitContextLike for InitContext<'a> {
+impl super::InitContextLike for InitContext<'_> {
     fn create_window(
         &mut self,
         attributes: super::WindowAttributes,

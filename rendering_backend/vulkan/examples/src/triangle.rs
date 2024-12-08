@@ -1,26 +1,21 @@
+use std::sync::Arc;
+
 mod winit_app;
 
 pub struct VulkanData {
-    entry: vulkan::library::VulkanLibrary,
-    lib: vulkan::instance::Instance,
-    surface: vulkan::surface::Surface,
+    instance: Arc<horizon::Instance>,
+    surface: horizon::Surface,
 }
 
 impl VulkanData {
     fn new(window: &winit::window::Window) -> Self {
-        let entry = vulkan::library::VulkanLibrary::new().unwrap();
-        let lib = entry
-            .create_instance(vulkan::library::InstanceCreateInfo {
-                application_name: "Test",
-                ..Default::default()
-            })
-            .unwrap();
-        let surface = entry.create_surface(&lib, &window).unwrap();
-        Self {
-            entry,
-            lib,
-            surface,
-        }
+        let instance = horizon::Instance::new_linked(horizon::instance::InstanceCreateInfo {
+            application_name: "Test".to_string(),
+            ..Default::default()
+        })
+        .unwrap();
+        let surface = instance.create_surface(&window).unwrap();
+        Self { instance, surface }
     }
 }
 

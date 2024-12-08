@@ -16,6 +16,17 @@ pub struct Instance {
     entry: ash::Entry,
 }
 
+unsafe impl Send for Instance {}
+unsafe impl Sync for Instance {}
+
+impl std::fmt::Debug for Instance {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Instance")
+            .field("app_name", &self.app_name)
+            .finish()
+    }
+}
+
 impl Drop for Instance {
     fn drop(&mut self) {
         tracing::debug!("Dropping instance");
@@ -128,7 +139,7 @@ impl Instance {
     }
 
     pub fn create_surface<T>(
-        instance: &Arc<Instance>,
+        self: &Arc<Instance>,
         handle: &T,
     ) -> Result<super::surface::Surface, error::Error>
     where
@@ -140,17 +151,17 @@ impl Instance {
         let surface = unsafe {
             // platform independent
             ash_window::create_surface(
-                &instance.entry,
-                &instance.raw,
+                &self.entry,
+                &self.raw,
                 *display_handle.as_ref(),
                 *window_handle.as_ref(),
-                instance.allocation_callbacks.as_deref(),
+                self.allocation_callbacks.as_deref(),
             )
             .map_err(Into::<error::VkError>::into)?
         };
         Ok(surface::Surface {
             raw: surface,
-            surface_loader: ash::khr::surface::Instance::new(&instance.entry, &instance.raw),
+            surface_loader: ash::khr::surface::Instance::new(&self.entry, &self.raw),
         })
     }
 
@@ -210,6 +221,38 @@ impl Instance {
     //     };
     //     Ok(info)
     // }
+    pub(crate) fn get_physical_device_properties(
+        &self,
+        device: &ash::vk::PhysicalDevice,
+    ) -> ash::vk::PhysicalDeviceProperties {
+        unsafe { self.raw.get_physical_device_properties(*device) }
+    }
+    pub(crate) fn get_physical_device_features(
+        &self,
+        device: &ash::vk::PhysicalDevice,
+    ) -> ash::vk::PhysicalDeviceFeatures {
+        unsafe { self.raw.get_physical_device_features(*device) }
+    }
+    pub(crate) fn get_physical_device_queue_family_properties(
+        &self,
+        physical_device: &ash::vk::PhysicalDevice,
+    ) -> Vec<ash::vk::QueueFamilyProperties> {
+        unsafe {
+            self.raw
+                .get_physical_device_queue_family_properties(*physical_device)
+        }
+    }
+
+    pub(crate) fn enumerate_device_extension_properties(
+        &self,
+        device: &ash::vk::PhysicalDevice,
+    ) -> Result<Vec<ExtensionProperties>, error::Error> {
+        let res = unsafe { self.raw.enumerate_device_extension_properties(*device) }?
+            .into_iter()
+            .map(Into::<ExtensionProperties>::into)
+            .collect::<Vec<_>>();
+        Ok(res)
+    }
 
     fn create_allocation_call_back(
         _entry: &ash::Entry,
@@ -233,13 +276,13 @@ impl Instance {
         let enabled_extensions = info
             .enabled_extensions
             .iter()
-            .map(|ext| ext.0.as_ptr())
+            .map(|ext| ext.to_str().as_ptr())
             .collect::<Vec<_>>();
 
         let enabled_layer_names = info
             .enabled_layers
             .iter()
-            .map(|ext| ext.0.as_ptr())
+            .map(|ext| ext.to_str().as_ptr())
             .collect::<Vec<_>>();
 
         let allocation_call_back =
