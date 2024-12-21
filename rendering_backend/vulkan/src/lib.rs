@@ -11,6 +11,7 @@ pub mod instance;
 pub mod memory;
 pub mod raw;
 pub mod surface;
+pub mod swapchain;
 pub mod types;
 
 pub use device::*;

@@ -9,7 +9,7 @@ pub struct VulkanData {
 
 impl VulkanData {
     fn new(window: &winit::window::Window) -> Self {
-        let instance = horizon::Instance::new_linked(horizon::instance::InstanceCreateInfo {
+        let instance = horizon::Instance::new_dynamic(horizon::instance::InstanceCreateInfo {
             application_name: "Test".to_string(),
             ..Default::default()
         })

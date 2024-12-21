@@ -5,13 +5,20 @@ use super::types::{ExtensionName, ExtensionProperties, Layer};
 use std::sync::Arc;
 use std::{ffi::CStr, ops::Deref};
 
+#[cfg(not(build_type = "dist"))]
+pub struct DebugInstance {
+    pub(crate) _debug_utils: ash::ext::debug_utils::Instance,
+    pub(crate) _debug_messenger: ash::vk::DebugUtilsMessengerEXT,
+    pub(crate) _callback_data: Box<DebugCallBackData>,
+    allocation_callbacks: Option<std::rc::Rc<ash::vk::AllocationCallbacks<'static>>>,
+}
 pub struct Instance {
     pub(super) raw: ash::Instance,
     pub allocation_callbacks: Option<std::rc::Rc<ash::vk::AllocationCallbacks<'static>>>,
     pub app_name: std::ffi::CString,
-    pub(super) _debug_utils: ash::ext::debug_utils::Instance,
-    pub(super) _debug_messenger: ash::vk::DebugUtilsMessengerEXT,
-    pub callback_data: Box<DebugCallBackData>,
+    #[cfg(not(build_type = "dist"))]
+    pub(crate) debug_messenger_instance: Option<DebugInstance>,
+
     /// Vulkan library loader
     entry: ash::Entry,
 }
@@ -27,15 +34,19 @@ impl std::fmt::Debug for Instance {
     }
 }
 
-impl Drop for Instance {
+impl Drop for DebugInstance {
     fn drop(&mut self) {
-        tracing::debug!("Dropping instance");
         unsafe {
             self._debug_utils.destroy_debug_utils_messenger(
                 self._debug_messenger,
                 self.allocation_callbacks.as_deref(),
             );
         };
+    }
+}
+impl Drop for Instance {
+    fn drop(&mut self) {
+        tracing::debug!("Dropping instance");
 
         unsafe {
             self.raw
@@ -117,13 +128,6 @@ impl Default for InstanceCreateInfo {
     fn default() -> Self {
         Self::empty()
     }
-}
-
-pub struct SwapChainSupport {
-    pub capabilities: ash::vk::SurfaceCapabilitiesKHR,
-    pub extent: ash::vk::Extent2D,
-    pub format: ash::vk::SurfaceFormatKHR,
-    pub present_mode: ash::vk::PresentModeKHR,
 }
 
 impl Instance {
@@ -302,21 +306,32 @@ impl Instance {
                 .map_err(Into::<error::VkError>::into)?
         };
 
-        let debug_creation_info = Self::messenger_create_info(&mut debug_messenger_data);
-        let debug_utils_loader = ash::ext::debug_utils::Instance::new(&entry, &instance);
-        let debug_call_back = unsafe {
-            debug_utils_loader
-                .create_debug_utils_messenger(&debug_creation_info, allocation_call_back.as_deref())
-                .unwrap()
+        #[cfg(not(build_type = "dist"))]
+        let debug_messenger_instance = {
+            let debug_creation_info = Self::messenger_create_info(&mut debug_messenger_data);
+            let debug_utils_loader = ash::ext::debug_utils::Instance::new(&entry, &instance);
+            let debug_call_back = unsafe {
+                debug_utils_loader
+                    .create_debug_utils_messenger(
+                        &debug_creation_info,
+                        allocation_call_back.as_deref(),
+                    )
+                    .unwrap()
+            };
+            DebugInstance {
+                _debug_utils: debug_utils_loader,
+                _debug_messenger: debug_call_back,
+                _callback_data: debug_messenger_data,
+                allocation_callbacks: allocation_call_back.clone(),
+            }
         };
 
         Ok(Arc::new(Instance {
             raw: instance,
             allocation_callbacks: allocation_call_back,
             app_name,
-            _debug_utils: debug_utils_loader,
-            _debug_messenger: debug_call_back,
-            callback_data: debug_messenger_data,
+            #[cfg(not(build_type = "dist"))]
+            debug_messenger_instance: Some(debug_messenger_instance),
             entry,
         }))
     }

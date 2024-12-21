@@ -29,6 +29,25 @@ impl Queue {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct SwapChainDescription {
+    surface: Rc<super::Surface>,
+}
+
+#[derive(Debug)]
+pub struct SwapChain {
+    inner: ash::vk::SwapchainKHR,
+    surface: Rc<super::Surface>,
+    capabilities: ash::vk::QueueFlags,
+}
+
+type SwapChainPromise = Promise<Rc<SwapChain>, SwapChainDescription>;
+impl SwapChain {
+    pub fn new_promise(desc: SwapChainDescription) -> SwapChainPromise {
+        Promise::new(desc)
+    }
+}
+
 pub struct Device {
     raw: ash::Device,
     physical_device: ash::vk::PhysicalDevice,
@@ -110,6 +129,13 @@ pub struct DeviceCreationInfo {
     order: DeviceOrdering,
 }
 
+pub struct SwapChainSupport {
+    pub capabilities: ash::vk::SurfaceCapabilitiesKHR,
+    pub extent: ash::vk::Extent2D,
+    pub format: ash::vk::SurfaceFormatKHR,
+    pub present_mode: ash::vk::PresentModeKHR,
+}
+
 pub struct PhysicalDeviceCreationInfo {}
 
 enum Support<Value, ID> {
@@ -157,6 +183,7 @@ struct PickPhysicalDevice {
 }
 
 mod physical {
+
     use super::*;
     pub fn get_init_details<'a>(
         instance: &Arc<Instance>,
@@ -225,6 +252,84 @@ mod physical {
             features,
         };
         Ok(res)
+    }
+
+    fn query_surface_support(
+        surface: &super::surface::Surface,
+        physical_device: ash::vk::PhysicalDevice,
+        window_inner_size: (u32, u32),
+    ) -> Option<SwapChainSupport> {
+        let formats = unsafe {
+            surface
+                .surface_loader
+                .get_physical_device_surface_formats(physical_device, surface.raw)
+        }
+        .unwrap();
+        let present_modes = unsafe {
+            surface
+                .surface_loader
+                .get_physical_device_surface_present_modes(physical_device, surface.raw)
+        }
+        .unwrap();
+        if !(!formats.is_empty() && !present_modes.is_empty()) {
+            return None;
+        }
+        let best_format = formats
+            .into_iter()
+            .max_by_key(|x| {
+                let mut score = match x.format {
+                    ash::vk::Format::B8G8R8A8_SRGB => 1,
+                    _ => 0,
+                };
+                score += match x.color_space {
+                    ash::vk::ColorSpaceKHR::SRGB_NONLINEAR => 2,
+                    _ => 0,
+                };
+                score
+            })
+            .unwrap();
+        let best_present_mode = present_modes
+            .into_iter()
+            .max_by_key(|x| {
+                match *x {
+                    // isn't this guaranteed to be available?
+                    ash::vk::PresentModeKHR::FIFO => 3,
+                    ash::vk::PresentModeKHR::MAILBOX => 2,
+                    ash::vk::PresentModeKHR::IMMEDIATE => 1,
+                    _ => 0,
+                }
+            })
+            .unwrap();
+        let present_capabilities = unsafe {
+            surface
+                .surface_loader
+                .get_physical_device_surface_capabilities(physical_device, surface.raw)
+        }
+        .unwrap();
+        let mut extent: ash::vk::Extent2D = if present_capabilities.current_extent.width != u32::MAX
+        {
+            ash::vk::Extent2D {
+                width: window_inner_size.0,
+                height: window_inner_size.1,
+            }
+        } else {
+            present_capabilities.current_extent
+        };
+        extent.width = extent.width.clamp(
+            present_capabilities.min_image_extent.width,
+            present_capabilities.max_image_extent.width,
+        );
+        extent.height = extent.height.clamp(
+            present_capabilities.min_image_extent.height,
+            present_capabilities.max_image_extent.height,
+        );
+        let swap_chain_support = SwapChainSupport {
+            format: best_format,
+            present_mode: best_present_mode,
+            extent,
+            capabilities: present_capabilities,
+        };
+        Some(swap_chain_support)
     }
 }
 impl Device {
