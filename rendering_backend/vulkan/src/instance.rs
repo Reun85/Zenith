@@ -1,10 +1,22 @@
 use super::error;
 use super::raw;
-use super::surface;
 use super::types::{ExtensionName, ExtensionProperties, Layer};
 use std::sync::Arc;
 use std::{ffi::CStr, ops::Deref};
 
+#[derive(derive_more::Deref)]
+pub struct Surface {
+    #[deref]
+    pub raw: ash::vk::SurfaceKHR,
+    pub surface_loader: ash::khr::surface::Instance,
+}
+
+// TODO: figure out a better Debug impl
+impl std::fmt::Debug for Surface {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Surface").field("raw", &self.raw).finish()
+    }
+}
 #[cfg(not(build_type = "dist"))]
 pub struct DebugInstance {
     pub(crate) _debug_utils: ash::ext::debug_utils::Instance,
@@ -55,8 +67,8 @@ impl Drop for Instance {
     }
 }
 
-impl infrastructure::ResourceDeleter<crate::surface::Surface> for Instance {
-    fn delete(&mut self, resource: &mut crate::surface::Surface) {
+impl infrastructure::ResourceDeleter<Surface> for Instance {
+    fn delete(&mut self, resource: &mut Surface) {
         unsafe {
             resource
                 .surface_loader
@@ -131,12 +143,12 @@ impl Default for InstanceCreateInfo {
 }
 
 impl Instance {
-    pub fn new_linked(info: InstanceCreateInfo) -> Result<Arc<Self>, error::Error> {
+    pub fn new_linked(info: InstanceCreateInfo) -> Result<Arc<Self>, error::InitError> {
         tracing::debug!("Creating VulkanLibrary");
         let entry = ash::Entry::linked();
         Instance::create_instance(entry, info)
     }
-    pub fn new_dynamic(info: InstanceCreateInfo) -> Result<Arc<Self>, error::Error> {
+    pub fn new_dynamic(info: InstanceCreateInfo) -> Result<Arc<Self>, error::InitError> {
         tracing::debug!("Creating VulkanLibrary");
         let entry = unsafe { ash::Entry::load() }?;
         Instance::create_instance(entry, info)
@@ -145,7 +157,7 @@ impl Instance {
     pub fn create_surface<T>(
         self: &Arc<Instance>,
         handle: &T,
-    ) -> Result<super::surface::Surface, error::Error>
+    ) -> Result<std::rc::Rc<Surface>, error::InitError>
     where
         T: raw_window_handle::HasDisplayHandle + raw_window_handle::HasWindowHandle,
     {
@@ -163,15 +175,15 @@ impl Instance {
             )
             .map_err(Into::<error::VkError>::into)?
         };
-        Ok(surface::Surface {
+        Ok(std::rc::Rc::new(Surface {
             raw: surface,
             surface_loader: ash::khr::surface::Instance::new(&self.entry, &self.raw),
-        })
+        }))
     }
 
     pub fn get_surface_required_extensions(
         handle: impl raw_window_handle::HasDisplayHandle,
-    ) -> Result<Vec<ExtensionName>, error::Error> {
+    ) -> Result<Vec<ExtensionName>, error::InitError> {
         tracing::debug!("Getting surface required extensions");
         let display_handle = raw_window_handle::HasDisplayHandle::display_handle(&handle)?;
         let surface_extensions =
@@ -250,7 +262,7 @@ impl Instance {
     pub(crate) fn enumerate_device_extension_properties(
         &self,
         device: &ash::vk::PhysicalDevice,
-    ) -> Result<Vec<ExtensionProperties>, error::Error> {
+    ) -> Result<Vec<ExtensionProperties>, error::InitError> {
         let res = unsafe { self.raw.enumerate_device_extension_properties(*device) }?
             .into_iter()
             .map(Into::<ExtensionProperties>::into)
@@ -267,7 +279,7 @@ impl Instance {
     fn create_instance(
         entry: ash::Entry,
         info: InstanceCreateInfo,
-    ) -> Result<Arc<Instance>, error::Error> {
+    ) -> Result<Arc<Instance>, error::InitError> {
         let _s = tracing::debug_span!("Instance creation");
         tracing::trace!("Instance creation info {:?}", info);
         let app_name = raw::string_to_cstring_remove_nuls(&info.application_name);
@@ -339,7 +351,7 @@ impl Instance {
     pub fn enumerate_instance_extension_properties(
         self: &Arc<Self>,
         layer_name: Option<&ExtensionName>,
-    ) -> Result<Vec<ExtensionProperties>, error::Error> {
+    ) -> Result<Vec<ExtensionProperties>, error::InitError> {
         let res = unsafe {
             self.entry
                 .enumerate_instance_extension_properties(layer_name.map(|ext| ext.deref()))
@@ -360,7 +372,7 @@ impl Instance {
         self: &Arc<Self>,
         required_extensions: &[ExtensionName],
         optional_extensions: Vec<ExtensionName>,
-    ) -> Result<Vec<ExtensionName>, error::Error> {
+    ) -> Result<Vec<ExtensionName>, error::InitError> {
         let available_extensions = self
             // TODO: what is this none?
             .enumerate_instance_extension_properties(None)?;
@@ -375,7 +387,7 @@ impl Instance {
                 .collect::<Vec<_>>())
         } else {
             // Collect all the missing extensions
-            Err(error::Error::RequiredExtensionsMissing(
+            Err(error::InitError::RequiredExtensionsMissing(
                 required_extensions
                     .iter()
                     .filter(|&ext| !available_extensions.iter().any(|av| &av.name == ext))
@@ -385,7 +397,7 @@ impl Instance {
         }
     }
 
-    fn enumerate_instance_layer_properties(&self) -> Result<Vec<Layer>, error::Error> {
+    fn enumerate_instance_layer_properties(&self) -> Result<Vec<Layer>, error::InitError> {
         let r = unsafe { self.entry.enumerate_instance_layer_properties() }
             .map_err(Into::<error::VkError>::into)
             .map(|v| v.into_iter().map(Into::<Layer>::into).collect::<Vec<_>>())?;
@@ -394,7 +406,7 @@ impl Instance {
     pub(crate) fn filter_available_validation_layers(
         &self,
         validation_layers: Vec<ExtensionName>,
-    ) -> Result<Vec<ExtensionName>, error::Error> {
+    ) -> Result<Vec<ExtensionName>, error::InitError> {
         let layers = self.enumerate_instance_layer_properties()?;
         let result = validation_layers
             .into_iter()

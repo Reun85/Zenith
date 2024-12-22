@@ -1,3 +1,3 @@
 pub(crate) struct Context {}
 
-pub(crate) type GenericError = horizon::error::Error;
+pub(crate) type GenericError = horizon::error::InitError;

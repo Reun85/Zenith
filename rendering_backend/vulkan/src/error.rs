@@ -1,5 +1,5 @@
 #[derive(Debug, thiserror::Error)]
-pub enum Error {
+pub enum InitError {
     #[error(transparent)]
     Vk(#[from] VkError),
     #[error("Driver could not enumerate physical deives")]
@@ -16,11 +16,13 @@ pub enum Error {
     HandleError(#[from] raw_window_handle::HandleError),
     #[error("Queue description could not be fit: {0:?}")]
     QueueDescriptionCouldNotBeFilled(super::device::QueueDescription),
+    #[error("Swapchain could not be created {0:?}")]
+    SwapchainCreationFailed(VkError),
 }
 
-impl From<ash::vk::Result> for Error {
+impl From<ash::vk::Result> for InitError {
     fn from(e: ash::vk::Result) -> Self {
-        Error::Vk(VkError(e))
+        InitError::Vk(VkError(e))
     }
 }
 
