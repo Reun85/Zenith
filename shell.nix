@@ -13,12 +13,10 @@
       systems = [ "x86_64-linux" "x86_64-darwin" ];
       perSystem = { config, lib, system, ... }:
         let
-          # overlay Cargo with nightly?
           pkgs = import inputs.nixpkgs {
             inherit system;
             overlays = [ inputs.rust-overlay.overlays.default ];
           };
-          # load in used rust Toolchain to ensure that toolchain is downloaded
           rustTools = (pkgs.rust-bin.fromRustupToolchainFile
             ./rust-toolchain.toml).override {
               extensions = [ "rust-analyzer" "rust-src" "clippy" "rustfmt" ];
